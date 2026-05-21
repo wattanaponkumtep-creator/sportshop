@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Briefcase, Factory, LogOut, Shirt } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, Factory, LogOut, Shirt, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -9,6 +9,7 @@ const NAV = [
   { href: "/jobs", label: "งาน / JOBs", icon: Briefcase },
   { href: "/customers", label: "ลูกค้า", icon: Users },
   { href: "/factories", label: "โรงงาน", icon: Factory },
+  { href: "/reports", label: "รายงาน", icon: BarChart3 },
 ];
 
 export function Sidebar({ user }: { user: { name: string | null; email: string; avatar_url: string | null; role: string } }) {

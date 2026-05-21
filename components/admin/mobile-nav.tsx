@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Briefcase, Factory } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, Factory, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -9,12 +9,13 @@ const NAV = [
   { href: "/jobs", label: "งาน", icon: Briefcase },
   { href: "/customers", label: "ลูกค้า", icon: Users },
   { href: "/factories", label: "โรงงาน", icon: Factory },
+  { href: "/reports", label: "รายงาน", icon: BarChart3 },
 ];
 
 export function MobileNav() {
   const pathname = usePathname();
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-4 border-t border-border bg-card/95 backdrop-blur md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-5 border-t border-border bg-card/95 backdrop-blur md:hidden">
       {NAV.map((item) => {
         const Icon = item.icon;
         const active = pathname === item.href || pathname.startsWith(item.href + "/");

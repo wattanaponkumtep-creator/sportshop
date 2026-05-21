@@ -62,3 +62,25 @@ export async function toggleFactoryActive(id: string, active: boolean) {
   revalidatePath("/factories");
   return { ok: true as const };
 }
+
+export async function deleteFactory(id: string) {
+  const supabase = await createClient();
+
+  const { count: jobCount } = await supabase
+    .from("factory_jobs")
+    .select("*", { count: "exact", head: true })
+    .eq("factory_id", id);
+
+  if (jobCount && jobCount > 0) {
+    return {
+      ok: false as const,
+      error: `ลบไม่ได้ — โรงงานนี้มีประวัติงาน ${jobCount} รายการ แนะนำให้กด "ปิดใช้งาน" แทน`,
+    };
+  }
+
+  const { error } = await supabase.from("factories").delete().eq("id", id);
+  if (error) return { ok: false as const, error: error.message };
+
+  revalidatePath("/factories");
+  return { ok: true as const };
+}

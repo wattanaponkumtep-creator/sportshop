@@ -4,17 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Pencil, Star } from "lucide-react";
+import { Plus, Pencil, Star, Trash2 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-import { createFactory, updateFactory, toggleFactoryActive, type FactoryInput } from "@/app/(admin)/factories/actions";
+import { createFactory, updateFactory, toggleFactoryActive, deleteFactory, type FactoryInput } from "@/app/(admin)/factories/actions";
 import type { Factory } from "@/lib/types/database";
 import { formatBaht } from "@/lib/utils";
 
 export function FactoriesView({ initialFactories }: { initialFactories: Factory[] }) {
   const [editing, setEditing] = useState<Factory | null>(null);
+  const [deleting, setDeleting] = useState<Factory | null>(null);
   const [creating, setCreating] = useState(false);
 
   return (
@@ -43,7 +44,7 @@ export function FactoriesView({ initialFactories }: { initialFactories: Factory[
               <TableHead className="text-center">คุณภาพ</TableHead>
               <TableHead className="text-right">ราคาฐาน</TableHead>
               <TableHead className="text-center">สถานะ</TableHead>
-              <TableHead></TableHead>
+              <TableHead className="w-24 text-right">จัดการ</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -63,10 +64,15 @@ export function FactoriesView({ initialFactories }: { initialFactories: Factory[
                 <TableCell className="text-center">
                   {f.is_active ? <Badge variant="success">ใช้งาน</Badge> : <Badge variant="secondary">ปิด</Badge>}
                 </TableCell>
-                <TableCell>
-                  <Button variant="ghost" size="icon" onClick={() => setEditing(f)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
+                <TableCell className="text-right">
+                  <div className="inline-flex gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => setEditing(f)} title="แก้ไข">
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setDeleting(f)} title="ลบ">
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -80,7 +86,68 @@ export function FactoriesView({ initialFactories }: { initialFactories: Factory[
           {editing && <FactoryFormBody factory={editing} onDone={() => setEditing(null)} />}
         </DialogContent>
       </Dialog>
+
+      <DeleteFactoryDialog factory={deleting} onClose={() => setDeleting(null)} />
     </>
+  );
+}
+
+function DeleteFactoryDialog({ factory, onClose }: { factory: Factory | null; onClose: () => void }) {
+  const [isPending, startTransition] = useTransition();
+  const [confirmText, setConfirmText] = useState("");
+
+  function handleConfirm() {
+    if (!factory) return;
+    startTransition(async () => {
+      const result = await deleteFactory(factory.id);
+      if (result.ok) {
+        toast({ title: "ลบโรงงานแล้ว" });
+        onClose();
+        setConfirmText("");
+      } else {
+        toast({ title: "ลบไม่สำเร็จ", description: result.error, variant: "destructive" });
+      }
+    });
+  }
+
+  return (
+    <Dialog open={!!factory} onOpenChange={(o) => { if (!o) { onClose(); setConfirmText(""); } }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>ลบโรงงาน</DialogTitle>
+          <DialogDescription>
+            การกระทำนี้ <strong className="text-destructive">ไม่สามารถยกเลิกได้</strong>
+          </DialogDescription>
+        </DialogHeader>
+
+        {factory && (
+          <div className="space-y-4">
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
+              <p>คุณกำลังจะลบโรงงาน <strong>{factory.name}</strong></p>
+              <p className="mt-2 text-muted-foreground">
+                ⚠️ ถ้าโรงงานมีประวัติงานอยู่ ระบบจะป้องกันการลบ — ใช้ &quot;ปิดใช้งาน&quot; แทน
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>พิมพ์ <code className="rounded bg-muted px-1.5 py-0.5 text-xs">ลบ</code> เพื่อยืนยัน</Label>
+              <Input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder="ลบ" />
+            </div>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => { onClose(); setConfirmText(""); }}>ยกเลิก</Button>
+          <Button
+            variant="destructive"
+            onClick={handleConfirm}
+            disabled={isPending || confirmText !== "ลบ"}
+          >
+            {isPending ? "กำลังลบ..." : "ลบถาวร"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
