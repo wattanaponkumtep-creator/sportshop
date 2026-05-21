@@ -60,28 +60,57 @@ export async function getReportData() {
   const sixMonthsBack = getMonthBoundsBangkok(5);
   const allTimeStart = sixMonthsBack.start;
 
-  const { data: jobs } = await supabase
-    .from("jobs")
-    .select(
-      "id, status, sale_price, cost, shipping_cost, other_cost, quantity, received_at, due_date, customer_id, factory_id, customers(name), factories(name)"
-    )
-    .gte("received_at", allTimeStart)
-    .order("received_at", { ascending: false });
+  const [{ data: jobs }, { data: paymentsData }] = await Promise.all([
+    supabase
+      .from("jobs")
+      .select(
+        "id, status, sale_price, cost, shipping_cost, other_cost, quantity, received_at, due_date, customer_id, factory_id, customers(name), factories(name)"
+      )
+      .gte("received_at", allTimeStart)
+      .order("received_at", { ascending: false }),
+    supabase
+      .from("payments")
+      .select("type, amount, paid_at, job_id")
+      .gte("paid_at", allTimeStart),
+  ]);
 
   const allJobs = (jobs ?? []) as ReportJob[];
+  const allPayments = (paymentsData ?? []) as { type: string; amount: number; paid_at: string; job_id: string }[];
 
-  const monthly: { label: string; revenue: number; profit: number; count: number }[] = [];
+  const monthly: { label: string; revenue: number; profit: number; count: number; cashIn: number }[] = [];
   for (let i = 5; i >= 0; i--) {
     const m = getMonthBoundsBangkok(i);
     const monthJobs = allJobs.filter(
       (j) => j.received_at >= m.start && j.received_at < m.end
+    );
+    const monthPayments = allPayments.filter(
+      (p) => p.paid_at >= m.start && p.paid_at < m.end
+    );
+    const cashIn = monthPayments.reduce(
+      (sum, p) => sum + (p.type === "refund" ? -Number(p.amount) : Number(p.amount)),
+      0
     );
     monthly.push({
       label: m.label,
       revenue: calcRevenue(monthJobs),
       profit: calcProfit(monthJobs),
       count: monthJobs.length,
+      cashIn,
     });
+  }
+
+  const paidByJob = new Map<string, number>();
+  for (const p of allPayments) {
+    const cur = paidByJob.get(p.job_id) ?? 0;
+    paidByJob.set(p.job_id, cur + (p.type === "refund" ? -Number(p.amount) : Number(p.amount)));
+  }
+
+  let outstandingTotal = 0;
+  for (const j of allJobs) {
+    if (j.status === "cancelled") continue;
+    const paid = paidByJob.get(j.id) ?? 0;
+    const remaining = Number(j.sale_price ?? 0) - paid;
+    if (remaining > 0) outstandingTotal += remaining;
   }
 
   const thisMonth = monthly[5];
@@ -137,6 +166,7 @@ export async function getReportData() {
     topFactories,
     overdueCount: overdue.length,
     totalJobsLast6Months: allJobs.length,
+    outstandingTotal,
   };
 }
 

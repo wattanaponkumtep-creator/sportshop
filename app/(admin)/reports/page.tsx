@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, DollarSign, Briefcase, AlertTriangle, Users, Factory } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Briefcase, AlertTriangle, Users, Factory, Wallet, HandCoins } from "lucide-react";
 import { getReportData, pctChange } from "@/lib/reports/queries";
 import { formatBaht } from "@/lib/utils";
 import { BarChart } from "@/components/reports/bar-chart";
@@ -55,6 +55,24 @@ export default async function ReportsPage() {
           changePositive={data.overdueCount === 0}
           icon={AlertTriangle}
           iconColor="text-red-400"
+        />
+      </section>
+
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
+        <KpiCard
+          label="เงินสดเข้าเดือนนี้"
+          value={formatBaht(data.thisMonth.cashIn)}
+          changeText={`เดือนที่แล้ว ${formatBaht(data.lastMonth.cashIn)}`}
+          icon={HandCoins}
+          iconColor="text-emerald-400"
+        />
+        <KpiCard
+          label="เงินรอเก็บทั้งหมด"
+          value={formatBaht(data.outstandingTotal)}
+          changeText={data.outstandingTotal > 0 ? "ลูกค้าค้างชำระ" : "ไม่มีค้างชำระ"}
+          changePositive={data.outstandingTotal === 0}
+          icon={Wallet}
+          iconColor="text-amber-400"
         />
       </section>
 
