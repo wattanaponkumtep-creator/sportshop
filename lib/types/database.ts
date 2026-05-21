@@ -19,6 +19,7 @@ export type FactoryJobStatus = "sent" | "producing" | "sewing" | "qc" | "returne
 export type FileKind = "artwork" | "mockup" | "slip" | "reference" | "other";
 export type PaymentType = "deposit" | "full" | "refund";
 export type ShipmentStatus = "preparing" | "shipped" | "in_transit" | "delivered" | "returned";
+export type MockupStatus = "draft" | "awaiting_approval" | "approved" | "rejected";
 
 export interface User {
   id: string;
@@ -169,6 +170,22 @@ export interface Notification {
   created_at: string;
 }
 
+export interface Mockup {
+  id: string;
+  job_id: string;
+  version: number;
+  title: string | null;
+  description: string | null;
+  status: MockupStatus;
+  approval_token: string;
+  storage_paths: string[];
+  decision_note: string | null;
+  decided_at: string | null;
+  decided_by_name: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 type Relationship = {
   foreignKeyName: string;
   columns: string[];
@@ -219,6 +236,10 @@ type ShipmentsRelationships = [
   { foreignKeyName: "shipments_job_id_fkey"; columns: ["job_id"]; isOneToOne: false; referencedRelation: "jobs"; referencedColumns: ["id"] }
 ];
 
+type MockupsRelationships = [
+  { foreignKeyName: "mockups_job_id_fkey"; columns: ["job_id"]; isOneToOne: false; referencedRelation: "jobs"; referencedColumns: ["id"] }
+];
+
 export type Database = {
   public: {
     Tables: {
@@ -234,12 +255,18 @@ export type Database = {
       payments: TableDef<Payment, PaymentsRelationships>;
       shipments: TableDef<Shipment, ShipmentsRelationships>;
       notifications: TableDef<Notification>;
+      mockups: TableDef<Mockup, MockupsRelationships>;
     };
     Views: { [_ in never]: never };
     Functions: {
       generate_job_code: { Args: Record<string, never>; Returns: string };
       get_public_tracking: { Args: { p_token: string }; Returns: unknown };
       is_staff: { Args: Record<string, never>; Returns: boolean };
+      get_mockup_for_approval: { Args: { p_token: string }; Returns: unknown };
+      submit_mockup_decision: {
+        Args: { p_token: string; p_decision: string; p_note?: string; p_name?: string };
+        Returns: unknown;
+      };
     };
     Enums: {
       user_role: UserRole;
@@ -250,6 +277,7 @@ export type Database = {
       file_kind: FileKind;
       payment_type: PaymentType;
       shipment_status: ShipmentStatus;
+      mockup_status: MockupStatus;
     };
     CompositeTypes: { [_ in never]: never };
   };

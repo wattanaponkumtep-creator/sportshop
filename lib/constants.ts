@@ -1,4 +1,4 @@
-import type { ChannelType, FactoryJobStatus, FileKind, JobStatus, PaymentType, PriorityLevel, ShipmentStatus } from "@/lib/types/database";
+import type { ChannelType, FactoryJobStatus, FileKind, JobStatus, MockupStatus, PaymentType, PriorityLevel, ShipmentStatus } from "@/lib/types/database";
 
 export const JOB_STATUS_LABEL: Record<JobStatus, string> = {
   received: "รับงาน",
@@ -87,4 +87,18 @@ export const SHIPMENT_STATUS_LABEL: Record<ShipmentStatus, string> = {
   in_transit: "อยู่ระหว่างขนส่ง",
   delivered: "ส่งถึงแล้ว",
   returned: "ตีกลับ",
+};
+
+export const MOCKUP_STATUS_LABEL: Record<MockupStatus, string> = {
+  draft: "ฉบับร่าง",
+  awaiting_approval: "รออนุมัติ",
+  approved: "อนุมัติแล้ว",
+  rejected: "ขอแก้ไข",
+};
+
+export const MOCKUP_STATUS_COLOR: Record<MockupStatus, string> = {
+  draft: "bg-slate-500/20 text-slate-200 border-slate-500/40",
+  awaiting_approval: "bg-amber-500/20 text-amber-200 border-amber-500/40",
+  approved: "bg-emerald-500/20 text-emerald-200 border-emerald-500/40",
+  rejected: "bg-red-500/20 text-red-200 border-red-500/40",
 };

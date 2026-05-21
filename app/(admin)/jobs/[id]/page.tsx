@@ -17,6 +17,7 @@ import { JobTimeline } from "@/components/jobs/job-timeline";
 import { JobFactoryPanel } from "@/components/jobs/job-factory-panel";
 import { JobShipmentPanel } from "@/components/jobs/job-shipment-panel";
 import { JobPayments } from "@/components/jobs/job-payments";
+import { JobMockups } from "@/components/jobs/job-mockups";
 import { CopyTrackLink } from "@/components/jobs/copy-track-link";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +42,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     { data: factoryJobs },
     { data: shipment },
     { data: payments },
+    { data: mockups },
   ] = await Promise.all([
     supabase.from("job_items").select("*").eq("job_id", id).order("position"),
     supabase.from("job_files").select("*").eq("job_id", id).order("created_at", { ascending: false }),
@@ -49,6 +51,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     supabase.from("factory_jobs").select("*").eq("job_id", id),
     supabase.from("shipments").select("*").eq("job_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("payments").select("*").eq("job_id", id).order("paid_at", { ascending: false }),
+    supabase.from("mockups").select("*").eq("job_id", id).order("version", { ascending: false }),
   ]);
 
   const profit = calcProfit(job);
@@ -98,6 +101,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           <TabsTrigger value="details">รายละเอียด</TabsTrigger>
           <TabsTrigger value="items">รายชื่อ/ไซส์</TabsTrigger>
           <TabsTrigger value="files">ไฟล์ ({files?.length ?? 0})</TabsTrigger>
+          <TabsTrigger value="mockups">Mockup ({mockups?.length ?? 0})</TabsTrigger>
           <TabsTrigger value="payments">การเงิน ({payments?.length ?? 0})</TabsTrigger>
           <TabsTrigger value="factory">โรงงาน</TabsTrigger>
           <TabsTrigger value="shipping">การจัดส่ง</TabsTrigger>
@@ -114,6 +118,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 
         <TabsContent value="files" className="mt-4">
           <JobFiles jobId={job.id} files={files ?? []} />
+        </TabsContent>
+
+        <TabsContent value="mockups" className="mt-4">
+          <JobMockups jobId={job.id} mockups={mockups ?? []} />
         </TabsContent>
 
         <TabsContent value="payments" className="mt-4">
