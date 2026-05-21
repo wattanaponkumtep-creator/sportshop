@@ -19,6 +19,7 @@ import { JobShipmentPanel } from "@/components/jobs/job-shipment-panel";
 import { JobPayments } from "@/components/jobs/job-payments";
 import { JobMockups } from "@/components/jobs/job-mockups";
 import { CopyTrackLink } from "@/components/jobs/copy-track-link";
+import { ManualNotifyButton } from "@/components/jobs/manual-notify-button";
 
 export const dynamic = "force-dynamic";
 
@@ -81,6 +82,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         <div className="flex flex-col gap-2 sm:flex-row">
           <JobStatusSelect jobId={job.id} currentStatus={job.status} />
           <CopyTrackLink trackToken={job.track_token} />
+          <ManualNotifyButton jobId={job.id} />
         </div>
       </header>
 

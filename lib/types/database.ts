@@ -170,6 +170,17 @@ export interface Notification {
   created_at: string;
 }
 
+export interface LineWebhookEvent {
+  id: string;
+  event_type: string;
+  line_user_id: string | null;
+  message_text: string | null;
+  raw_payload: Record<string, unknown>;
+  customer_id: string | null;
+  linked_at: string | null;
+  created_at: string;
+}
+
 export interface Mockup {
   id: string;
   job_id: string;
@@ -256,6 +267,7 @@ export type Database = {
       shipments: TableDef<Shipment, ShipmentsRelationships>;
       notifications: TableDef<Notification>;
       mockups: TableDef<Mockup, MockupsRelationships>;
+      line_webhook_events: TableDef<LineWebhookEvent>;
     };
     Views: { [_ in never]: never };
     Functions: {

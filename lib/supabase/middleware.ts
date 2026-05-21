@@ -27,7 +27,8 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/customers") ||
     pathname.startsWith("/jobs") ||
     pathname.startsWith("/factories") ||
-    pathname.startsWith("/reports");
+    pathname.startsWith("/reports") ||
+    pathname.startsWith("/settings");
 
   if (isAdminRoute && !user) {
     const url = request.nextUrl.clone();

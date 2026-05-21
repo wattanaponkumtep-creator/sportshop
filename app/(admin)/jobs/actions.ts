@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import type { FactoryJobStatus, JobStatus } from "@/lib/types/database";
+import { sendStatusNotificationToCustomer } from "@/lib/jobs/notifications";
 
 const JOB_STATUS_VALUES = [
   "received", "designing", "awaiting_approval", "sent_to_factory",
@@ -68,6 +69,17 @@ export async function updateJobStatus(jobId: string, status: JobStatus) {
   const supabase = await createClient();
   const { error } = await supabase.from("jobs").update({ status }).eq("id", jobId);
   if (error) return { ok: false as const, error: error.message };
+
+  // Auto-send LINE notification on meaningful status changes (best-effort, ignore failures)
+  const notifyStatuses: JobStatus[] = ["sent_to_factory", "ready_to_ship", "shipped", "completed"];
+  if (notifyStatuses.includes(status)) {
+    try {
+      await sendStatusNotificationToCustomer(jobId, status);
+    } catch {
+      // Don't block status update if notification fails
+    }
+  }
+
   revalidatePath(`/jobs/${jobId}`);
   revalidatePath("/dashboard");
   return { ok: true as const };
