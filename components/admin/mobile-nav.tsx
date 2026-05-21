@@ -15,7 +15,7 @@ const NAV = [
 export function MobileNav() {
   const pathname = usePathname();
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-5 border-t border-border bg-card/95 backdrop-blur md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-30 grid grid-cols-5 border-t border-border bg-card/95 backdrop-blur md:hidden">
       {NAV.map((item) => {
         const Icon = item.icon;
         const active = pathname === item.href || pathname.startsWith(item.href + "/");
@@ -24,8 +24,8 @@ export function MobileNav() {
             key={item.href}
             href={item.href}
             className={cn(
-              "flex flex-col items-center gap-1 py-2.5 text-xs transition-colors",
-              active ? "text-primary" : "text-muted-foreground"
+              "flex flex-col items-center gap-0.5 py-2.5 text-[11px] transition-colors",
+              active ? "text-primary" : "text-muted-foreground hover:text-foreground"
             )}
           >
             <Icon className="h-5 w-5" />

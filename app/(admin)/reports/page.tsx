@@ -19,11 +19,12 @@ export default async function ReportsPage() {
   return (
     <div className="container space-y-4 p-3 sm:space-y-6 sm:p-4 md:p-8">
       <header>
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">รายงาน / Analytics</h1>
-        <p className="text-sm text-muted-foreground">ภาพรวมยอดขายและการดำเนินงาน 6 เดือนล่าสุด</p>
+        <p className="text-xs uppercase tracking-wider text-muted-foreground">วิเคราะห์ธุรกิจ</p>
+        <h1 className="mt-0.5 text-2xl font-bold tracking-tight md:text-3xl">รายงาน / Analytics</h1>
+        <p className="mt-1 text-sm text-muted-foreground">ภาพรวมยอดขายและการดำเนินงาน 6 เดือนล่าสุด</p>
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         <KpiCard
           label="ยอดขายเดือนนี้"
           value={formatBaht(data.thisMonth.revenue)}
@@ -58,7 +59,7 @@ export default async function ReportsPage() {
         />
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
+      <section className="grid gap-2 sm:grid-cols-2 sm:gap-3">
         <KpiCard
           label="เงินสดเข้าเดือนนี้"
           value={formatBaht(data.thisMonth.cashIn)}
@@ -197,24 +198,28 @@ function KpiCard({
 }) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
-        <Icon className={`h-5 w-5 ${iconColor}`} />
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <div className="truncate text-[11px] text-muted-foreground sm:text-xs">{label}</div>
+            <div className="truncate text-base font-bold sm:text-2xl">{value}</div>
+          </div>
+          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-current/10 ${iconColor}`}>
+            <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+          </div>
+        </div>
         {changeText && (
           <div
-            className={`mt-1 inline-flex items-center gap-1 text-xs ${
+            className={`mt-2 inline-flex items-center gap-1 text-[10px] sm:text-xs ${
               changePositive === true ? "text-emerald-400" : changePositive === false ? "text-red-400" : "text-muted-foreground"
             }`}
           >
             {changePositive === true && <TrendingUp className="h-3 w-3" />}
             {changePositive === false && <TrendingDown className="h-3 w-3" />}
-            {changeText}
+            <span className="truncate">{changeText}</span>
           </div>
         )}
-        {hint && <div className="mt-1 text-xs text-muted-foreground">{hint}</div>}
+        {hint && <div className="mt-1 text-[10px] text-muted-foreground sm:text-xs">{hint}</div>}
       </CardContent>
     </Card>
   );

@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Sidebar } from "@/components/admin/sidebar";
-import { MobileNav } from "@/components/admin/mobile-nav";
+import { AdminShell } from "@/components/admin/admin-shell";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -18,13 +17,5 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect("/login?error=not_active");
   }
 
-  return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar user={profile} />
-      <div className="flex flex-1 flex-col">
-        <main className="flex-1 pb-20 md:pb-0">{children}</main>
-        <MobileNav />
-      </div>
-    </div>
-  );
+  return <AdminShell user={profile}>{children}</AdminShell>;
 }

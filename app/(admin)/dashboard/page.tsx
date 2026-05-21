@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Briefcase, Users, Factory, TrendingUp } from "lucide-react";
-import { formatBaht } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Briefcase, Users, Factory, TrendingUp, Plus, ArrowRight } from "lucide-react";
+import { cn, formatBaht } from "@/lib/utils";
 import { KanbanBoard } from "@/components/jobs/kanban-board";
 
 export const dynamic = "force-dynamic";
@@ -26,45 +28,77 @@ export default async function DashboardPage() {
 
   return (
     <div className="container space-y-4 p-3 sm:space-y-6 sm:p-4 md:p-8">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">ภาพรวมงานทั้งหมดของร้าน</p>
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">ภาพรวมร้าน</p>
+          <h1 className="mt-0.5 text-2xl font-bold tracking-tight md:text-3xl">สวัสดี 👋</h1>
+        </div>
+        <div className="flex gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/customers/new"><Plus className="h-4 w-4" /> ลูกค้าใหม่</Link>
+          </Button>
+          <Button asChild size="sm">
+            <Link href="/jobs/new"><Plus className="h-4 w-4" /> JOB ใหม่</Link>
+          </Button>
+        </div>
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="งานที่กำลังทำ" value={jobCount ?? 0} icon={Briefcase} accent="text-orange-400" />
-        <StatCard label="ลูกค้าทั้งหมด" value={customerCount ?? 0} icon={Users} accent="text-blue-400" />
-        <StatCard label="โรงงานที่ใช้งาน" value={factoryCount ?? 0} icon={Factory} accent="text-purple-400" />
-        <StatCard label="ยอดขายรวม" value={formatBaht(monthSale)} icon={TrendingUp} accent="text-emerald-400" />
+      <section className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+        <StatCard label="งานที่กำลังทำ" value={jobCount ?? 0} icon={Briefcase} accent="orange" href="/jobs" />
+        <StatCard label="ลูกค้าทั้งหมด" value={customerCount ?? 0} icon={Users} accent="blue" href="/customers" />
+        <StatCard label="โรงงานใช้งาน" value={factoryCount ?? 0} icon={Factory} accent="purple" href="/factories" />
+        <StatCard label="ยอดขายรวม" value={formatBaht(monthSale)} icon={TrendingUp} accent="emerald" href="/reports" />
       </section>
 
-      <section>
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold sm:text-lg">บอร์ดงาน (Kanban)</h2>
+          <Link href="/jobs" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+            ดูทั้งหมด <ArrowRight className="h-3 w-3" />
+          </Link>
+        </div>
         <KanbanBoard initialJobs={jobs ?? []} />
       </section>
     </div>
   );
 }
 
+const ACCENTS = {
+  orange: { bg: "bg-orange-500/10", text: "text-orange-400", ring: "ring-orange-500/20" },
+  blue: { bg: "bg-blue-500/10", text: "text-blue-400", ring: "ring-blue-500/20" },
+  purple: { bg: "bg-purple-500/10", text: "text-purple-400", ring: "ring-purple-500/20" },
+  emerald: { bg: "bg-emerald-500/10", text: "text-emerald-400", ring: "ring-emerald-500/20" },
+} as const;
+
 function StatCard({
   label,
   value,
   icon: Icon,
   accent,
+  href,
 }: {
   label: string;
   value: string | number;
   icon: React.ComponentType<{ className?: string }>;
-  accent: string;
+  accent: keyof typeof ACCENTS;
+  href?: string;
 }) {
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
-        <Icon className={`h-5 w-5 ${accent}`} />
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+  const a = ACCENTS[accent];
+  const inner = (
+    <Card className="transition hover:border-primary/40">
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex items-center gap-2.5">
+          <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", a.bg)}>
+            <Icon className={cn("h-5 w-5", a.text)} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[11px] text-muted-foreground sm:text-xs">{label}</div>
+            <div className="mt-0.5 truncate text-base font-bold sm:text-xl">{value}</div>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
+  if (href) return <Link href={href}>{inner}</Link>;
+  return inner;
 }
