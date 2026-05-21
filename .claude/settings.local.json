@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(git --version)",
+      "Bash(npx --yes create-next-app@latest . --typescript --tailwind --app --no-src-dir --no-turbopack --import-alias \"@/*\" --eslint --use-npm --skip-install --yes)",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(npm ls *)",
+      "Bash(npm view *)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder SUPABASE_SERVICE_ROLE_KEY=placeholder npx next build)"
+    ]
+  }
+}
