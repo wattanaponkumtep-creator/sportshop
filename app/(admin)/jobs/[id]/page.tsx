@@ -60,15 +60,15 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   const factory = job.factories as { id: string; name: string } | null;
 
   return (
-    <div className="container space-y-6 p-4 md:p-8">
+    <div className="container space-y-4 p-3 sm:space-y-6 sm:p-4 md:p-8">
       <Link href="/jobs" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> งานทั้งหมด
       </Link>
 
       <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-mono text-3xl font-bold tracking-tight">{job.job_code}</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="font-mono text-2xl font-bold tracking-tight sm:text-3xl">{job.job_code}</h1>
             <Badge variant="outline" className={JOB_STATUS_COLOR[job.status]}>{JOB_STATUS_LABEL[job.status]}</Badge>
             <Badge className={PRIORITY_COLOR[job.priority]}>{PRIORITY_LABEL[job.priority]}</Badge>
           </div>
@@ -79,14 +79,14 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             <span>เปิดเมื่อ {formatDateTH(job.received_at, "d MMM yy HH:mm")}</span>
           </div>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex flex-wrap gap-2">
           <JobStatusSelect jobId={job.id} currentStatus={job.status} />
           <CopyTrackLink trackToken={job.track_token} />
           <ManualNotifyButton jobId={job.id} />
         </div>
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         <SummaryCard label="จำนวน" value={`${job.quantity} ตัว`} />
         <SummaryCard label="ยอดขาย" value={formatBaht(profit.revenue)} />
         <SummaryCard label="ต้นทุนรวม" value={formatBaht(profit.expense)} />
@@ -99,16 +99,18 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
       </section>
 
       <Tabs defaultValue="details">
-        <TabsList className="flex w-full flex-wrap justify-start gap-1">
-          <TabsTrigger value="details">รายละเอียด</TabsTrigger>
-          <TabsTrigger value="items">รายชื่อ/ไซส์</TabsTrigger>
-          <TabsTrigger value="files">ไฟล์ ({files?.length ?? 0})</TabsTrigger>
-          <TabsTrigger value="mockups">Mockup ({mockups?.length ?? 0})</TabsTrigger>
-          <TabsTrigger value="payments">การเงิน ({payments?.length ?? 0})</TabsTrigger>
-          <TabsTrigger value="factory">โรงงาน</TabsTrigger>
-          <TabsTrigger value="shipping">การจัดส่ง</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
-        </TabsList>
+        <div className="-mx-3 overflow-x-auto sm:mx-0">
+          <TabsList className="ml-3 inline-flex h-10 w-max gap-1 sm:ml-0">
+            <TabsTrigger value="details">รายละเอียด</TabsTrigger>
+            <TabsTrigger value="items">รายชื่อ/ไซส์</TabsTrigger>
+            <TabsTrigger value="files">ไฟล์ ({files?.length ?? 0})</TabsTrigger>
+            <TabsTrigger value="mockups">Mockup ({mockups?.length ?? 0})</TabsTrigger>
+            <TabsTrigger value="payments">การเงิน ({payments?.length ?? 0})</TabsTrigger>
+            <TabsTrigger value="factory">โรงงาน</TabsTrigger>
+            <TabsTrigger value="shipping">การจัดส่ง</TabsTrigger>
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="details" className="mt-4">
           <JobDetailsPanel job={job} factories={factories ?? []} />
@@ -154,10 +156,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 function SummaryCard({ label, value, accent, hint }: { label: string; value: string; accent?: string; hint?: string }) {
   return (
     <Card>
-      <CardContent className="p-4">
-        <div className="text-xs text-muted-foreground">{label}</div>
-        <div className={`mt-1 text-xl font-bold ${accent ?? ""}`}>{value}</div>
-        {hint && <div className="mt-0.5 text-xs text-muted-foreground">{hint}</div>}
+      <CardContent className="p-3 sm:p-4">
+        <div className="text-[11px] text-muted-foreground sm:text-xs">{label}</div>
+        <div className={`mt-1 text-base font-bold sm:text-xl ${accent ?? ""}`}>{value}</div>
+        {hint && <div className="mt-0.5 text-[10px] text-muted-foreground sm:text-xs">{hint}</div>}
       </CardContent>
     </Card>
   );

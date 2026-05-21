@@ -4,7 +4,11 @@ const config: Config = {
   darkMode: ["class"],
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./lib/**/*.{ts,tsx}"],
   theme: {
-    container: { center: true, padding: "1rem", screens: { "2xl": "1400px" } },
+    container: {
+      center: true,
+      padding: { DEFAULT: "0.75rem", sm: "1rem", lg: "2rem" },
+      screens: { "2xl": "1400px" },
+    },
     extend: {
       colors: {
         background: "hsl(var(--background))",

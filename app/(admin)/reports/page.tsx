@@ -17,7 +17,7 @@ export default async function ReportsPage() {
   const margin = data.thisMonth.revenue > 0 ? (data.thisMonth.profit / data.thisMonth.revenue) * 100 : 0;
 
   return (
-    <div className="container space-y-6 p-4 md:p-8">
+    <div className="container space-y-4 p-3 sm:space-y-6 sm:p-4 md:p-8">
       <header>
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">รายงาน / Analytics</h1>
         <p className="text-sm text-muted-foreground">ภาพรวมยอดขายและการดำเนินงาน 6 เดือนล่าสุด</p>

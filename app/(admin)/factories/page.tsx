@@ -13,7 +13,7 @@ export default async function FactoriesPage() {
     .order("name");
 
   return (
-    <div className="container space-y-6 p-4 md:p-8">
+    <div className="container space-y-4 p-3 sm:space-y-6 sm:p-4 md:p-8">
       <header>
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">โรงงาน</h1>
         <p className="text-sm text-muted-foreground">จัดการโรงงาน Outsource ที่ใช้ผลิตเสื้อ</p>

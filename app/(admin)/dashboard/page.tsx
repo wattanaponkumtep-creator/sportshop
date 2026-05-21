@@ -25,7 +25,7 @@ export default async function DashboardPage() {
     .reduce((sum, j) => sum + Number(j.sale_price ?? 0), 0);
 
   return (
-    <div className="container space-y-6 p-4 md:p-8">
+    <div className="container space-y-4 p-3 sm:space-y-6 sm:p-4 md:p-8">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Dashboard</h1>
         <p className="text-sm text-muted-foreground">ภาพรวมงานทั้งหมดของร้าน</p>

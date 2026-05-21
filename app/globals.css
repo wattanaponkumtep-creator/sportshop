@@ -29,8 +29,22 @@
 
 @layer base {
   * { @apply border-border; }
-  html { @apply scroll-smooth; }
-  body { @apply bg-background text-foreground antialiased; font-feature-settings: "rlig" 1, "calt" 1; }
+  html {
+    @apply scroll-smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    overflow-x: hidden;
+    overscroll-behavior-y: none;
+  }
+  img, video { max-width: 100%; height: auto; }
+  /* prevent iOS auto-zoom when focusing inputs (font ≥ 16px on focus) */
+  input, textarea, select { font-size: 16px; }
+  @media (min-width: 640px) {
+    input, textarea, select { font-size: 0.875rem; }
+  }
 }
 
 @layer utilities {

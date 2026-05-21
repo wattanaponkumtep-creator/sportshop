@@ -35,7 +35,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
   ]);
 
   return (
-    <div className="container space-y-6 p-4 md:p-8">
+    <div className="container space-y-4 p-3 sm:space-y-6 sm:p-4 md:p-8">
       <Link href="/customers" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> ลูกค้าทั้งหมด
       </Link>
@@ -61,11 +61,13 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
       </header>
 
       <Tabs defaultValue="channels">
-        <TabsList>
-          <TabsTrigger value="channels">ช่องทางติดต่อ ({channels?.length ?? 0})</TabsTrigger>
-          <TabsTrigger value="jobs">ประวัติ JOB ({jobs?.length ?? 0})</TabsTrigger>
-          <TabsTrigger value="note">หมายเหตุ</TabsTrigger>
-        </TabsList>
+        <div className="-mx-3 overflow-x-auto sm:mx-0">
+          <TabsList className="ml-3 inline-flex h-10 w-max gap-1 sm:ml-0">
+            <TabsTrigger value="channels">ช่องทางติดต่อ ({channels?.length ?? 0})</TabsTrigger>
+            <TabsTrigger value="jobs">ประวัติ JOB ({jobs?.length ?? 0})</TabsTrigger>
+            <TabsTrigger value="note">หมายเหตุ</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="channels" className="mt-4">
           <CustomerChannels customerId={customer.id} channels={channels ?? []} />

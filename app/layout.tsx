@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Noto_Sans_Thai } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
@@ -9,6 +9,14 @@ const thai = Noto_Sans_Thai({ subsets: ["thai", "latin"], variable: "--font-thai
 export const metadata: Metadata = {
   title: "SportShop — ระบบจัดการร้านเสื้อกีฬา",
   description: "ระบบจัดการออเดอร์ ลูกค้า โรงงาน และไฟล์งานสำหรับร้านรับผลิตเสื้อกีฬาพิมพ์ลาย",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  themeColor: "#0a0a0a",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

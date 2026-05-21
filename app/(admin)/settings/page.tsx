@@ -24,7 +24,7 @@ export default async function SettingsPage() {
   ]);
 
   return (
-    <div className="container space-y-6 p-4 md:p-8">
+    <div className="container space-y-4 p-3 sm:space-y-6 sm:p-4 md:p-8">
       <header>
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">ตั้งค่าระบบ</h1>
         <p className="text-sm text-muted-foreground">การเชื่อมต่อ LINE OA + Webhook events</p>
