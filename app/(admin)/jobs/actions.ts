@@ -252,6 +252,43 @@ export async function saveShipment(jobId: string, input: z.input<typeof shipment
   return { ok: true as const };
 }
 
+export async function deleteJob(jobId: string) {
+  const supabase = await createClient();
+
+  // 1. Collect all storage paths to delete
+  const [{ data: jobFiles }, { data: mockups }, { data: payments }] = await Promise.all([
+    supabase.from("job_files").select("storage_path").eq("job_id", jobId),
+    supabase.from("mockups").select("storage_paths").eq("job_id", jobId),
+    supabase.from("payments").select("slip_path").eq("job_id", jobId).not("slip_path", "is", null),
+  ]);
+
+  const pathsToDelete: string[] = [];
+  for (const f of (jobFiles ?? []) as { storage_path: string }[]) {
+    if (f.storage_path) pathsToDelete.push(f.storage_path);
+  }
+  for (const m of (mockups ?? []) as { storage_paths: string[] }[]) {
+    if (Array.isArray(m.storage_paths)) pathsToDelete.push(...m.storage_paths);
+  }
+  for (const p of (payments ?? []) as { slip_path: string | null }[]) {
+    if (p.slip_path) pathsToDelete.push(p.slip_path);
+  }
+
+  // 2. Delete files from storage (best-effort; ignore errors)
+  if (pathsToDelete.length > 0) {
+    await supabase.storage.from("job-files").remove(pathsToDelete);
+  }
+
+  // 3. Delete the job (cascade will handle job_items, job_files, job_timeline,
+  //    factory_jobs, payments, shipments, mockups, notifications)
+  const { error } = await supabase.from("jobs").delete().eq("id", jobId);
+  if (error) return { ok: false as const, error: error.message };
+
+  revalidatePath("/jobs");
+  revalidatePath("/dashboard");
+  revalidatePath("/reports");
+  return { ok: true as const };
+}
+
 export async function deleteJobFile(fileId: string, jobId: string) {
   const supabase = await createClient();
   const { data: file } = await supabase.from("job_files").select("storage_path").eq("id", fileId).maybeSingle();
