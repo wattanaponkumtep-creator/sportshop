@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Briefcase, Users, Factory, TrendingUp, Plus, ArrowRight } from "lucide-react";
+import { Briefcase, Users, Factory, TrendingUp, Plus, ArrowRight, AlertTriangle } from "lucide-react";
 import { cn, formatBaht } from "@/lib/utils";
 import { KanbanBoard } from "@/components/jobs/kanban-board";
 
@@ -10,6 +10,8 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+
+  const todayISO = new Date().toISOString().slice(0, 10);
 
   const [{ count: jobCount }, { count: customerCount }, { count: factoryCount }, { data: jobs }] = await Promise.all([
     supabase.from("jobs").select("*", { count: "exact", head: true }).neq("status", "completed").neq("status", "cancelled"),
@@ -25,6 +27,10 @@ export default async function DashboardPage() {
   const monthSale = (jobs ?? [])
     .filter((j) => j.status !== "cancelled")
     .reduce((sum, j) => sum + Number(j.sale_price ?? 0), 0);
+
+  const overdueCount = (jobs ?? []).filter(
+    (j) => j.due_date && j.due_date < todayISO && !["completed", "shipped", "cancelled"].includes(j.status as string)
+  ).length;
 
   return (
     <div className="container space-y-4 p-3 sm:space-y-6 sm:p-4 md:p-8">
@@ -49,6 +55,23 @@ export default async function DashboardPage() {
         <StatCard label="โรงงานใช้งาน" value={factoryCount ?? 0} icon={Factory} accent="purple" href="/factories" />
         <StatCard label="ยอดขายรวม" value={formatBaht(monthSale)} icon={TrendingUp} accent="emerald" href="/reports" />
       </section>
+
+      {overdueCount > 0 && (
+        <Link href="/jobs?overdue=true">
+          <Card className="border-destructive/30 bg-destructive/5 transition hover:border-destructive/60">
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-destructive/10">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <div className="flex-1">
+                <div className="font-semibold">⚠️ มี {overdueCount} งานเลยกำหนดส่ง</div>
+                <div className="text-xs text-muted-foreground">คลิกเพื่อดูรายการทั้งหมด</div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </Link>
+      )}
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
