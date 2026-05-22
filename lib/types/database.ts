@@ -84,6 +84,10 @@ export interface Job {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  layout_progress: number;
+  print_progress: number;
+  sew_progress: number;
+  ship_progress: number;
 }
 
 export interface JobItem {
@@ -181,6 +185,28 @@ export interface LineWebhookEvent {
   created_at: string;
 }
 
+export interface FactoryCheckin {
+  id: string;
+  job_id: string;
+  factory_id: string | null;
+  status: string;
+  note: string | null;
+  checked_in_by: string | null;
+  created_at: string;
+}
+
+export interface ShopInfo {
+  id: number;
+  shop_name: string;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  tax_id: string | null;
+  bank_info: string | null;
+  logo_url: string | null;
+  updated_at: string;
+}
+
 export interface Mockup {
   id: string;
   job_id: string;
@@ -268,6 +294,8 @@ export type Database = {
       notifications: TableDef<Notification>;
       mockups: TableDef<Mockup, MockupsRelationships>;
       line_webhook_events: TableDef<LineWebhookEvent>;
+      factory_checkins: TableDef<FactoryCheckin>;
+      shop_info: TableDef<ShopInfo>;
     };
     Views: { [_ in never]: never };
     Functions: {

@@ -6,6 +6,8 @@ import { Briefcase, Users, Factory, TrendingUp, Plus, ArrowRight, AlertTriangle 
 import { cn, formatBaht } from "@/lib/utils";
 import { KanbanBoard } from "@/components/jobs/kanban-board";
 import { DailyChecklist } from "@/components/admin/daily-checklist";
+import { DailySchedule } from "@/components/admin/daily-schedule";
+import { FollowupSuggestions } from "@/components/admin/followup-suggestions";
 
 export const dynamic = "force-dynamic";
 
@@ -74,7 +76,12 @@ export default async function DashboardPage() {
         </Link>
       )}
 
-      <DailyChecklist />
+      <FollowupSuggestions />
+
+      <div className="grid gap-3 lg:grid-cols-2">
+        <DailyChecklist />
+        <DailySchedule />
+      </div>
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">

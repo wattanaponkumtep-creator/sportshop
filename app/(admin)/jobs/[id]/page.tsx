@@ -24,6 +24,9 @@ import { DeleteJobButton } from "@/components/jobs/delete-job-button";
 import { WorkflowStepper } from "@/components/jobs/workflow-stepper";
 import { SizeSummary } from "@/components/jobs/size-summary";
 import { QuickContact } from "@/components/jobs/quick-contact";
+import { ProductionStages } from "@/components/jobs/production-stages";
+import { FactoryCheckins } from "@/components/jobs/factory-checkins";
+import { FileText } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +52,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     { data: payments },
     { data: mockups },
     { data: customerChannels },
+    { data: checkins },
   ] = await Promise.all([
     supabase.from("job_items").select("*").eq("job_id", id).order("position"),
     supabase.from("job_files").select("*").eq("job_id", id).order("created_at", { ascending: false }),
@@ -59,6 +63,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     supabase.from("payments").select("*").eq("job_id", id).order("paid_at", { ascending: false }),
     supabase.from("mockups").select("*").eq("job_id", id).order("version", { ascending: false }),
     supabase.from("customer_channels").select("channel_type, external_id, display_name").eq("customer_id", (job as { customer_id: string }).customer_id),
+    supabase.from("factory_checkins").select("*").eq("job_id", id).order("created_at", { ascending: false }),
   ]);
 
   const profit = calcProfit(job);
@@ -94,11 +99,24 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           />
           <CopyTrackLink trackToken={job.track_token} />
           <ManualNotifyButton jobId={job.id} />
+          <Button asChild variant="outline" size="icon" title="ใบเสนอราคา">
+            <Link href={`/jobs/${job.id}/invoice`}>
+              <FileText className="h-4 w-4" />
+            </Link>
+          </Button>
           <DeleteJobButton jobId={job.id} jobCode={job.job_code} />
         </div>
       </header>
 
       <WorkflowStepper currentStatus={job.status} timeline={timeline ?? []} />
+
+      <ProductionStages
+        jobId={job.id}
+        layoutProgress={job.layout_progress ?? 0}
+        printProgress={job.print_progress ?? 0}
+        sewProgress={job.sew_progress ?? 0}
+        shipProgress={job.ship_progress ?? 0}
+      />
 
       <section className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         <SummaryCard label="จำนวน" value={`${job.quantity} ตัว`} />
@@ -147,7 +165,13 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           <JobPayments jobId={job.id} salePrice={Number(job.sale_price)} payments={payments ?? []} />
         </TabsContent>
 
-        <TabsContent value="factory" className="mt-4">
+        <TabsContent value="factory" className="mt-4 space-y-4">
+          <FactoryCheckins
+            jobId={job.id}
+            factories={factories ?? []}
+            currentFactoryId={factory?.id ?? null}
+            checkins={checkins ?? []}
+          />
           <JobFactoryPanel
             jobId={job.id}
             factories={factories ?? []}
