@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
-import { Shirt, Package, CheckCircle2, Circle, Truck } from "lucide-react";
+import { Shirt, Package, Truck } from "lucide-react";
 import { createServiceClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { JOB_STATUS_COLOR, JOB_STATUS_LABEL, SHIPMENT_STATUS_LABEL } from "@/lib/constants";
 import type { JobStatus } from "@/lib/types/database";
 import { formatDateTH } from "@/lib/utils";
+import { WorkflowStepper } from "@/components/jobs/workflow-stepper";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,8 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
           <Badge variant="outline" className={JOB_STATUS_COLOR[job.status]}>{JOB_STATUS_LABEL[job.status]}</Badge>
         </header>
 
+        <WorkflowStepper currentStatus={job.status} timeline={job.timeline ?? []} variant="public" />
+
         <Card>
           <CardContent className="grid gap-3 p-5 sm:grid-cols-2">
             <InfoRow label="ลูกค้า" value={job.customer_name} />
@@ -72,20 +75,15 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
 
         <Card>
           <CardContent className="p-5">
-            <div className="mb-4 flex items-center gap-2 font-semibold">
-              <Package className="h-5 w-5 text-primary" /> Timeline
+            <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
+              <Package className="h-4 w-4 text-primary" /> ประวัติการอัปเดตทั้งหมด
             </div>
             {job.timeline.length === 0 ? (
-              <p className="py-4 text-center text-muted-foreground">ยังไม่มี event</p>
+              <p className="py-4 text-center text-sm text-muted-foreground">ยังไม่มี event</p>
             ) : (
-              <ol className="relative space-y-4 border-l border-border pl-6">
+              <ol className="space-y-2">
                 {job.timeline.slice().reverse().map((ev, idx) => (
-                  <li key={idx} className="relative">
-                    {idx === 0 ? (
-                      <CheckCircle2 className="absolute -left-[31px] top-0 h-5 w-5 fill-primary text-primary-foreground" />
-                    ) : (
-                      <Circle className="absolute -left-[29px] top-1.5 h-3 w-3 fill-muted-foreground text-muted-foreground" />
-                    )}
+                  <li key={idx} className="rounded-md border border-border bg-card/40 p-2.5">
                     <div className="text-sm">{ev.description}</div>
                     <div className="mt-0.5 text-xs text-muted-foreground">{formatDateTH(ev.created_at, "d MMM yy HH:mm")}</div>
                   </li>

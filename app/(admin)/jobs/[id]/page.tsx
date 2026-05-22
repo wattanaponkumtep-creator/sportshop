@@ -21,6 +21,7 @@ import { JobMockups } from "@/components/jobs/job-mockups";
 import { CopyTrackLink } from "@/components/jobs/copy-track-link";
 import { ManualNotifyButton } from "@/components/jobs/manual-notify-button";
 import { DeleteJobButton } from "@/components/jobs/delete-job-button";
+import { WorkflowStepper } from "@/components/jobs/workflow-stepper";
 
 export const dynamic = "force-dynamic";
 
@@ -87,6 +88,8 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           <DeleteJobButton jobId={job.id} jobCode={job.job_code} />
         </div>
       </header>
+
+      <WorkflowStepper currentStatus={job.status} timeline={timeline ?? []} />
 
       <section className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         <SummaryCard label="จำนวน" value={`${job.quantity} ตัว`} />
