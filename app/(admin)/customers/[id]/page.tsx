@@ -10,6 +10,7 @@ import { CHANNEL_LABEL, JOB_STATUS_COLOR, JOB_STATUS_LABEL } from "@/lib/constan
 import { formatBaht, formatDateTH } from "@/lib/utils";
 import { ArrowLeft, Phone, Plus } from "lucide-react";
 import { CustomerChannels } from "@/components/customers/customer-channels";
+import { DeleteCustomerButton } from "@/components/customers/delete-customer-button";
 
 export const dynamic = "force-dynamic";
 
@@ -53,11 +54,14 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             <span>เพิ่มเมื่อ {formatDateTH(customer.created_at, "d MMM yy")}</span>
           </div>
         </div>
-        <Button asChild>
-          <Link href={`/jobs/new?customer=${customer.id}`}>
-            <Plus className="h-4 w-4" /> เปิด JOB ใหม่
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild>
+            <Link href={`/jobs/new?customer=${customer.id}`}>
+              <Plus className="h-4 w-4" /> เปิด JOB ใหม่
+            </Link>
+          </Button>
+          <DeleteCustomerButton customerId={customer.id} customerName={customer.name} />
+        </div>
       </header>
 
       <Tabs defaultValue="channels">

@@ -116,3 +116,27 @@ export async function removeCustomerChannel(channelId: string, customerId: strin
   revalidatePath(`/customers/${customerId}`);
   return { ok: true as const };
 }
+
+export async function deleteCustomer(id: string) {
+  const supabase = await createClient();
+
+  // Check if customer has any jobs
+  const { count: jobCount } = await supabase
+    .from("jobs")
+    .select("*", { count: "exact", head: true })
+    .eq("customer_id", id);
+
+  if (jobCount && jobCount > 0) {
+    return {
+      ok: false as const,
+      error: `ลบไม่ได้ — ลูกค้าคนนี้มีงาน ${jobCount} รายการ ลบงานทั้งหมดก่อน หรือย้ายงานไปลูกค้าคนอื่น`,
+    };
+  }
+
+  // Customer channels will cascade delete automatically (on delete cascade)
+  const { error } = await supabase.from("customers").delete().eq("id", id);
+  if (error) return { ok: false as const, error: error.message };
+
+  revalidatePath("/customers");
+  return { ok: true as const };
+}
