@@ -22,6 +22,8 @@ import { CopyTrackLink } from "@/components/jobs/copy-track-link";
 import { ManualNotifyButton } from "@/components/jobs/manual-notify-button";
 import { DeleteJobButton } from "@/components/jobs/delete-job-button";
 import { WorkflowStepper } from "@/components/jobs/workflow-stepper";
+import { SizeSummary } from "@/components/jobs/size-summary";
+import { QuickContact } from "@/components/jobs/quick-contact";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +48,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     { data: shipment },
     { data: payments },
     { data: mockups },
+    { data: customerChannels },
   ] = await Promise.all([
     supabase.from("job_items").select("*").eq("job_id", id).order("position"),
     supabase.from("job_files").select("*").eq("job_id", id).order("created_at", { ascending: false }),
@@ -55,6 +58,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     supabase.from("shipments").select("*").eq("job_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("payments").select("*").eq("job_id", id).order("paid_at", { ascending: false }),
     supabase.from("mockups").select("*").eq("job_id", id).order("version", { ascending: false }),
+    supabase.from("customer_channels").select("channel_type, external_id, display_name").eq("customer_id", (job as { customer_id: string }).customer_id),
   ]);
 
   const profit = calcProfit(job);
@@ -83,6 +87,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         </div>
         <div className="flex flex-wrap gap-2">
           <JobStatusSelect jobId={job.id} currentStatus={job.status} />
+          <QuickContact
+            customerName={customer?.name ?? ""}
+            phone={customer?.phone ?? null}
+            channels={customerChannels ?? []}
+          />
           <CopyTrackLink trackToken={job.track_token} />
           <ManualNotifyButton jobId={job.id} />
           <DeleteJobButton jobId={job.id} jobCode={job.job_code} />
@@ -121,7 +130,8 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           <JobDetailsPanel job={job} factories={factories ?? []} />
         </TabsContent>
 
-        <TabsContent value="items" className="mt-4">
+        <TabsContent value="items" className="mt-4 space-y-4">
+          <SizeSummary items={items ?? []} />
           <JobItemsEditor jobId={job.id} initialItems={items ?? []} />
         </TabsContent>
 

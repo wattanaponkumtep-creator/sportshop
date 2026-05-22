@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Briefcase, Users, Factory, TrendingUp, Plus, ArrowRight, AlertTriangle } from "lucide-react";
 import { cn, formatBaht } from "@/lib/utils";
 import { KanbanBoard } from "@/components/jobs/kanban-board";
+import { DailyChecklist } from "@/components/admin/daily-checklist";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +73,8 @@ export default async function DashboardPage() {
           </Card>
         </Link>
       )}
+
+      <DailyChecklist />
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
