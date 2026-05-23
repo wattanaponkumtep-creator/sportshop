@@ -309,6 +309,10 @@ export type Database = {
         Args: { p_token: string; p_decision: string; p_note?: string; p_name?: string };
         Returns: unknown;
       };
+      post_customer_comment: {
+        Args: { p_token: string; p_message: string; p_name?: string };
+        Returns: unknown;
+      };
     };
     Enums: {
       user_role: UserRole;
