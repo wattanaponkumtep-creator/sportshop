@@ -8,6 +8,7 @@ import { formatDateTH, timeAgo } from "@/lib/utils";
 import { isLineConfigured } from "@/lib/line/client";
 import { LinkLineUserButton } from "@/components/settings/link-line-user";
 import { NotificationsSection } from "@/components/settings/notifications-section";
+import { CopyLineUserId } from "@/components/settings/copy-line-user-id";
 
 export const dynamic = "force-dynamic";
 
@@ -131,7 +132,7 @@ export default async function SettingsPage() {
                       </TableCell>
                       <TableCell>
                         {ev.line_user_id ? (
-                          <code className="text-xs">{ev.line_user_id.slice(0, 12)}...</code>
+                          <CopyLineUserId userId={ev.line_user_id} />
                         ) : (
                           <span className="text-xs text-muted-foreground">-</span>
                         )}

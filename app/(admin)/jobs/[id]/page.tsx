@@ -24,6 +24,7 @@ import { DeleteJobButton } from "@/components/jobs/delete-job-button";
 import { WorkflowStepper } from "@/components/jobs/workflow-stepper";
 import { SizeSummary } from "@/components/jobs/size-summary";
 import { QuickContact } from "@/components/jobs/quick-contact";
+import { NotifyCustomerDialog } from "@/components/jobs/notify-customer-dialog";
 import { ProductionStages } from "@/components/jobs/production-stages";
 import { FactoryCheckins } from "@/components/jobs/factory-checkins";
 import { FileText } from "lucide-react";
@@ -93,6 +94,15 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         <div className="flex flex-wrap gap-2">
           <JobStatusSelect jobId={job.id} currentStatus={job.status} />
           <QuickContact
+            customerName={customer?.name ?? ""}
+            phone={customer?.phone ?? null}
+            channels={customerChannels ?? []}
+          />
+          <NotifyCustomerDialog
+            jobCode={job.job_code}
+            productType={job.product_type}
+            status={job.status}
+            trackToken={job.track_token}
             customerName={customer?.name ?? ""}
             phone={customer?.phone ?? null}
             channels={customerChannels ?? []}
