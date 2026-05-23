@@ -29,6 +29,8 @@ export interface User {
   role: UserRole;
   is_active: boolean;
   created_at: string;
+  calendar_token: string;
+  line_user_id_personal: string | null;
 }
 
 export interface Customer {

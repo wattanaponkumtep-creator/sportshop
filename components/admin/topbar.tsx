@@ -2,6 +2,16 @@
 import { usePathname } from "next/navigation";
 import { PanelLeft, PanelLeftClose, Menu } from "lucide-react";
 import { useSidebar } from "./sidebar-context";
+import { NotificationBell } from "./notification-bell";
+
+type Alert = {
+  job_id: string;
+  job_code: string;
+  customer_name: string;
+  reason: string;
+  level: "urgent" | "warning" | "info";
+  detail: string;
+};
 
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -22,7 +32,7 @@ function getPageTitle(pathname: string): string {
   return "SportShop";
 }
 
-export function Topbar() {
+export function Topbar({ alerts }: { alerts: Alert[] }) {
   const { collapsed, toggle, setMobileOpen } = useSidebar();
   const pathname = usePathname();
   const title = getPageTitle(pathname);
@@ -51,6 +61,10 @@ export function Topbar() {
       </button>
 
       <h2 className="truncate text-base font-semibold md:text-lg">{title}</h2>
+
+      <div className="ml-auto">
+        <NotificationBell alerts={alerts} />
+      </div>
     </header>
   );
 }

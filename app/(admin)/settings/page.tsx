@@ -7,6 +7,7 @@ import { CheckCircle2, XCircle, MessageSquare } from "lucide-react";
 import { formatDateTH, timeAgo } from "@/lib/utils";
 import { isLineConfigured } from "@/lib/line/client";
 import { LinkLineUserButton } from "@/components/settings/link-line-user";
+import { NotificationsSection } from "@/components/settings/notifications-section";
 
 export const dynamic = "force-dynamic";
 
@@ -14,21 +15,39 @@ export default async function SettingsPage() {
   const supabase = await createClient();
   const lineReady = isLineConfigured();
 
-  const [{ data: events }, { data: customers }] = await Promise.all([
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const [{ data: events }, { data: customers }, { data: meProfile }] = await Promise.all([
     supabase
       .from("line_webhook_events")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(50),
     supabase.from("customers").select("id, name").order("name").limit(500),
+    supabase
+      .from("users")
+      .select("calendar_token, line_user_id_personal")
+      .eq("id", user?.id ?? "")
+      .maybeSingle(),
   ]);
+
+  const me = meProfile as { calendar_token: string; line_user_id_personal: string | null } | null;
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "");
 
   return (
     <div className="container space-y-4 p-3 sm:space-y-6 sm:p-4 md:p-8">
       <header>
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">ตั้งค่าระบบ</h1>
-        <p className="text-sm text-muted-foreground">การเชื่อมต่อ LINE OA + Webhook events</p>
+        <p className="text-sm text-muted-foreground">LINE OA · Calendar · Daily digest · Webhook events</p>
       </header>
+
+      {me && (
+        <NotificationsSection
+          calendarToken={me.calendar_token}
+          personalLineId={me.line_user_id_personal}
+          siteUrl={siteUrl}
+        />
+      )}
 
       <Card>
         <CardHeader>

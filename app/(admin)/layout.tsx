@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { getFollowupSuggestions } from "@/lib/suggestions/followup";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -17,5 +18,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect("/login?error=not_active");
   }
 
-  return <AdminShell user={profile}>{children}</AdminShell>;
+  const suggestions = await getFollowupSuggestions();
+  const alerts = suggestions.map((s) => ({
+    job_id: s.job_id,
+    job_code: s.job_code,
+    customer_name: s.customer_name,
+    reason: s.reason,
+    level: s.level,
+    detail: s.detail,
+  }));
+
+  return <AdminShell user={profile} alerts={alerts}>{children}</AdminShell>;
 }
