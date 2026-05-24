@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import { Shirt, ImageIcon, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -83,16 +82,19 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
                 {signedUrls.map((url, i) => (
                   url ? (
                     <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border border-border bg-background">
-                      <Image
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
                         src={url}
                         alt={`Mockup ${i + 1}`}
-                        width={800}
-                        height={800}
                         className="h-auto w-full object-contain"
-                        unoptimized
+                        loading="lazy"
                       />
                     </a>
-                  ) : null
+                  ) : (
+                    <div key={i} className="flex h-40 items-center justify-center rounded-lg border border-destructive/30 bg-destructive/5 text-sm text-destructive">
+                      ⚠ โหลดรูปไม่สำเร็จ
+                    </div>
+                  )
                 ))}
               </div>
             )}

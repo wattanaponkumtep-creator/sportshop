@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 import { Shirt, Package, Truck, ImageIcon, Ruler, ExternalLink, Palette, Printer, Scissors, Factory, ClipboardCheck } from "lucide-react";
 import { createServiceClient } from "@/lib/supabase/server";
@@ -157,16 +156,19 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
                       rel="noopener noreferrer"
                       className="block overflow-hidden rounded-lg border border-border bg-background transition hover:border-primary"
                     >
-                      <Image
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
                         src={url}
                         alt={`Mockup ${i + 1}`}
-                        width={600}
-                        height={600}
                         className="h-auto w-full object-contain"
-                        unoptimized
+                        loading="lazy"
                       />
                     </a>
-                  ) : null
+                  ) : (
+                    <div key={i} className="flex h-32 items-center justify-center rounded-lg border border-destructive/30 bg-destructive/5 text-xs text-destructive">
+                      ⚠ โหลดรูปไม่สำเร็จ
+                    </div>
+                  )
                 )}
               </div>
 
