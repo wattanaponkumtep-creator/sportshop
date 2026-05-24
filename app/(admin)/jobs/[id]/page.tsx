@@ -1,14 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ExternalLink, Copy } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { JOB_STATUS_COLOR, JOB_STATUS_LABEL, PRIORITY_COLOR, PRIORITY_LABEL } from "@/lib/constants";
-import { formatBaht, formatDateTH } from "@/lib/utils";
-import { calcProfit } from "@/lib/jobs/profit";
+import { formatDateTH } from "@/lib/utils";
 import { JobStatusSelect } from "@/components/jobs/job-status-select";
 import { JobDetailsPanel } from "@/components/jobs/job-details-panel";
 import { JobItemsEditor } from "@/components/jobs/job-items-editor";
@@ -27,6 +25,7 @@ import { QuickContact } from "@/components/jobs/quick-contact";
 import { NotifyCustomerDialog } from "@/components/jobs/notify-customer-dialog";
 import { ProductionStages } from "@/components/jobs/production-stages";
 import { FactoryCheckins } from "@/components/jobs/factory-checkins";
+import { LineItemsEditor } from "@/components/jobs/line-items-editor";
 import { FileText } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -54,6 +53,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     { data: mockups },
     { data: customerChannels },
     { data: checkins },
+    { data: lineItems },
   ] = await Promise.all([
     supabase.from("job_items").select("*").eq("job_id", id).order("position"),
     supabase.from("job_files").select("*").eq("job_id", id).order("created_at", { ascending: false }),
@@ -65,9 +65,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     supabase.from("mockups").select("*").eq("job_id", id).order("version", { ascending: false }),
     supabase.from("customer_channels").select("channel_type, external_id, display_name").eq("customer_id", (job as { customer_id: string }).customer_id),
     supabase.from("factory_checkins").select("*").eq("job_id", id).order("created_at", { ascending: false }),
+    supabase.from("job_line_items").select("*").eq("job_id", id).order("position"),
   ]);
 
-  const profit = calcProfit(job);
   const customer = job.customers as { id: string; name: string; phone: string | null } | null;
   const factory = job.factories as { id: string; name: string } | null;
 
@@ -84,6 +84,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             <Badge variant="outline" className={JOB_STATUS_COLOR[job.status]}>{JOB_STATUS_LABEL[job.status]}</Badge>
             <Badge className={PRIORITY_COLOR[job.priority]}>{PRIORITY_LABEL[job.priority]}</Badge>
           </div>
+          {job.job_label && (
+            <div className="text-base font-medium text-foreground sm:text-lg">📦 {job.job_label}</div>
+          )}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
             {customer && <Link href={`/customers/${customer.id}`} className="hover:text-foreground">ลูกค้า: {customer.name}</Link>}
             {customer?.phone && <span>{customer.phone}</span>}
@@ -128,17 +131,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         shipProgress={job.ship_progress ?? 0}
       />
 
-      <section className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
-        <SummaryCard label="จำนวน" value={`${job.quantity} ตัว`} />
-        <SummaryCard label="ยอดขาย" value={formatBaht(profit.revenue)} />
-        <SummaryCard label="ต้นทุนรวม" value={formatBaht(profit.expense)} />
-        <SummaryCard
-          label="กำไร"
-          value={formatBaht(profit.profit)}
-          accent={profit.profit >= 0 ? "text-emerald-400" : "text-red-400"}
-          hint={profit.revenue > 0 ? `${(profit.margin * 100).toFixed(1)}%` : undefined}
-        />
-      </section>
+      {/* ลบส่วน summary ออก — ดูใน tab "การเงิน" แทน */}
 
       <Tabs defaultValue="details">
         <div className="-mx-3 overflow-x-auto sm:mx-0">
@@ -171,7 +164,14 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           <JobMockups jobId={job.id} mockups={mockups ?? []} />
         </TabsContent>
 
-        <TabsContent value="payments" className="mt-4">
+        <TabsContent value="payments" className="mt-4 space-y-4">
+          <LineItemsEditor
+            jobId={job.id}
+            initialItems={lineItems ?? []}
+            shippingCost={Number(job.shipping_cost ?? 0)}
+            otherCost={Number(job.other_cost ?? 0)}
+            factories={factories ?? []}
+          />
           <JobPayments jobId={job.id} salePrice={Number(job.sale_price)} payments={payments ?? []} />
         </TabsContent>
 
@@ -202,14 +202,3 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   );
 }
 
-function SummaryCard({ label, value, accent, hint }: { label: string; value: string; accent?: string; hint?: string }) {
-  return (
-    <Card>
-      <CardContent className="p-3 sm:p-4">
-        <div className="text-[11px] text-muted-foreground sm:text-xs">{label}</div>
-        <div className={`mt-1 text-base font-bold sm:text-xl ${accent ?? ""}`}>{value}</div>
-        {hint && <div className="mt-0.5 text-[10px] text-muted-foreground sm:text-xs">{hint}</div>}
-      </CardContent>
-    </Card>
-  );
-}

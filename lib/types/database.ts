@@ -39,9 +39,25 @@ export interface Customer {
   phone: string | null;
   primary_channel: ChannelType;
   note: string | null;
+  team_name: string | null;
+  default_job_label: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface JobLineItem {
+  id: string;
+  job_id: string;
+  product_type: string | null;
+  collar_type: string | null;
+  description: string | null;
+  quantity: number;
+  unit_sale_price: number;
+  unit_cost: number;
+  factory_id: string | null;
+  position: number;
+  created_at: string;
 }
 
 export interface CustomerChannel {
@@ -90,6 +106,7 @@ export interface Job {
   print_progress: number;
   sew_progress: number;
   ship_progress: number;
+  job_label: string | null;
 }
 
 export interface JobItem {
@@ -298,6 +315,8 @@ export type Database = {
       line_webhook_events: TableDef<LineWebhookEvent>;
       factory_checkins: TableDef<FactoryCheckin>;
       shop_info: TableDef<ShopInfo>;
+      job_line_items: TableDef<JobLineItem>;
+      customer_comments: TableDef<{ id: string; job_id: string; author_name: string | null; message: string; created_at: string }>;
     };
     Views: { [_ in never]: never };
     Functions: {

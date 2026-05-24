@@ -23,6 +23,7 @@ type EditInput = {
   due_date: string;
   factory_id: string;
   note: string;
+  job_label: string;
 };
 
 const PRIORITIES: PriorityLevel[] = ["normal", "urgent", "rush"];
@@ -43,6 +44,7 @@ export function JobDetailsPanel({ job, factories }: { job: Job; factories: { id:
       due_date: job.due_date ?? "",
       factory_id: job.factory_id ?? "",
       note: job.note ?? "",
+      job_label: job.job_label ?? "",
     },
   });
   const factoryId = watch("factory_id");
@@ -71,12 +73,12 @@ export function JobDetailsPanel({ job, factories }: { job: Job; factories: { id:
         <CardHeader><CardTitle>รายละเอียดงาน</CardTitle></CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
-            <Label>ประเภทเสื้อ</Label>
-            <Input {...register("product_type")} />
+            <Label>ชื่อไฟล์งาน / Job Label</Label>
+            <Input {...register("job_label")} placeholder="เช่น เสื้อบอลทีมทรู A 25 ตัว" />
           </div>
-          <div className="space-y-2">
-            <Label>จำนวน</Label>
-            <Input type="number" min="0" {...register("quantity")} />
+          <div className="space-y-2 sm:col-span-2">
+            <Label>ประเภทเสื้อ (สั้น)</Label>
+            <Input {...register("product_type")} placeholder="เช่น เสื้อบอลคอกลม" />
           </div>
           <div className="space-y-2">
             <Label>ความสำคัญ</Label>
@@ -91,7 +93,7 @@ export function JobDetailsPanel({ job, factories }: { job: Job; factories: { id:
             <Label>กำหนดส่ง</Label>
             <Input type="date" {...register("due_date")} />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 sm:col-span-2">
             <Label>โรงงาน</Label>
             <Select value={factoryId || "_none"} onValueChange={(v) => setValue("factory_id", v === "_none" ? "" : v)}>
               <SelectTrigger><SelectValue placeholder="ยังไม่เลือก" /></SelectTrigger>
@@ -103,16 +105,13 @@ export function JobDetailsPanel({ job, factories }: { job: Job; factories: { id:
           </div>
         </CardContent>
       </Card>
-
-      <Card>
-        <CardHeader><CardTitle>การเงิน</CardTitle></CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2"><Label>ราคาขาย (บาท)</Label><Input type="number" step="0.01" min="0" {...register("sale_price")} /></div>
-          <div className="space-y-2"><Label>ต้นทุนโรงงาน</Label><Input type="number" step="0.01" min="0" {...register("cost")} /></div>
-          <div className="space-y-2"><Label>ค่าส่ง</Label><Input type="number" step="0.01" min="0" {...register("shipping_cost")} /></div>
-          <div className="space-y-2"><Label>ค่าอื่น ๆ</Label><Input type="number" step="0.01" min="0" {...register("other_cost")} /></div>
-        </CardContent>
-      </Card>
+      {/* การเงิน ย้ายไปอยู่ tab "การเงิน" — รายละเอียดละเอียดกว่าด้วย Line Items */}
+      {/* hidden fields: keep editable via Finance tab */}
+      <input type="hidden" {...register("quantity")} value={job.quantity} />
+      <input type="hidden" {...register("sale_price")} value={Number(job.sale_price)} />
+      <input type="hidden" {...register("cost")} value={Number(job.cost)} />
+      <input type="hidden" {...register("shipping_cost")} value={Number(job.shipping_cost)} />
+      <input type="hidden" {...register("other_cost")} value={Number(job.other_cost)} />
 
       <Card>
         <CardHeader><CardTitle>หมายเหตุ</CardTitle></CardHeader>

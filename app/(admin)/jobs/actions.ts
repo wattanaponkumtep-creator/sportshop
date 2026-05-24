@@ -87,6 +87,7 @@ export async function updateJobStatus(jobId: string, status: JobStatus) {
 
 const editJobSchema = z.object({
   product_type: z.string().trim().nullable().optional(),
+  job_label: z.string().trim().nullable().optional(),
   quantity: z.coerce.number().int().min(0),
   sale_price: z.coerce.number().min(0),
   cost: z.coerce.number().min(0),
@@ -105,6 +106,7 @@ export async function updateJob(jobId: string, input: z.input<typeof editJobSche
   const supabase = await createClient();
   const { error } = await supabase.from("jobs").update({
     product_type: parsed.data.product_type || null,
+    job_label: parsed.data.job_label || null,
     quantity: parsed.data.quantity,
     sale_price: parsed.data.sale_price,
     cost: parsed.data.cost,

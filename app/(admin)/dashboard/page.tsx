@@ -16,22 +16,46 @@ export default async function DashboardPage() {
 
   const todayISO = new Date().toISOString().slice(0, 10);
 
-  const [{ count: jobCount }, { count: customerCount }, { count: factoryCount }, { data: jobs }] = await Promise.all([
+  const [{ count: jobCount }, { count: customerCount }, { count: factoryCount }, { data: jobs }, { data: mockups }] = await Promise.all([
     supabase.from("jobs").select("*", { count: "exact", head: true }).neq("status", "completed").neq("status", "cancelled"),
     supabase.from("customers").select("*", { count: "exact", head: true }),
     supabase.from("factories").select("*", { count: "exact", head: true }).eq("is_active", true),
     supabase
       .from("jobs")
-      .select("id, job_code, status, priority, quantity, sale_price, due_date, customers(name)")
+      .select("id, job_code, job_label, status, priority, quantity, sale_price, due_date, customers(name)")
       .order("created_at", { ascending: false })
       .limit(200),
+    supabase
+      .from("mockups")
+      .select("job_id, version, storage_paths")
+      .order("version", { ascending: false }),
   ]);
 
-  const monthSale = (jobs ?? [])
+  // Pick latest mockup per job + generate signed URL for thumbnail
+  const latestMockupByJob = new Map<string, string>(); // job_id → first storage path
+  for (const m of (mockups ?? []) as { job_id: string; storage_paths: string[] }[]) {
+    if (!latestMockupByJob.has(m.job_id) && m.storage_paths.length > 0) {
+      latestMockupByJob.set(m.job_id, m.storage_paths[0]);
+    }
+  }
+  const pathsToSign = Array.from(latestMockupByJob.values());
+  const signedUrlMap = new Map<string, string>();
+  if (pathsToSign.length > 0) {
+    const { data: signedData } = await supabase.storage.from("job-files").createSignedUrls(pathsToSign, 3600);
+    for (const s of signedData ?? []) {
+      if (s.path && s.signedUrl) signedUrlMap.set(s.path, s.signedUrl);
+    }
+  }
+  const jobsWithThumb = (jobs ?? []).map((j) => {
+    const path = latestMockupByJob.get(j.id as string);
+    return { ...j, thumbnail_url: path ? signedUrlMap.get(path) ?? null : null };
+  });
+
+  const monthSale = jobsWithThumb
     .filter((j) => j.status !== "cancelled")
     .reduce((sum, j) => sum + Number(j.sale_price ?? 0), 0);
 
-  const overdueCount = (jobs ?? []).filter(
+  const overdueCount = jobsWithThumb.filter(
     (j) => j.due_date && j.due_date < todayISO && !["completed", "shipped", "cancelled"].includes(j.status as string)
   ).length;
 
@@ -90,7 +114,7 @@ export default async function DashboardPage() {
             ดูทั้งหมด <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
-        <KanbanBoard initialJobs={jobs ?? []} />
+        <KanbanBoard initialJobs={jobsWithThumb} />
       </section>
     </div>
   );

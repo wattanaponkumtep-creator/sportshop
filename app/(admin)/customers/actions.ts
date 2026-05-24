@@ -18,6 +18,8 @@ const customerSchema = z.object({
   phone: z.string().trim().optional().nullable(),
   primary_channel: z.enum(CHANNEL_VALUES).default("phone"),
   note: z.string().trim().optional().nullable(),
+  team_name: z.string().trim().optional().nullable(),
+  default_job_label: z.string().trim().optional().nullable(),
   channels: z.array(channelSchema).default([]),
 });
 
@@ -39,6 +41,8 @@ export async function createCustomer(input: CustomerFormInput) {
       phone: parsed.data.phone || null,
       primary_channel: parsed.data.primary_channel,
       note: parsed.data.note || null,
+      team_name: parsed.data.team_name || null,
+      default_job_label: parsed.data.default_job_label || null,
       created_by: user?.id ?? null,
     })
     .select("id")
@@ -79,6 +83,8 @@ export async function updateCustomer(id: string, input: CustomerFormInput) {
       phone: parsed.data.phone || null,
       primary_channel: parsed.data.primary_channel,
       note: parsed.data.note || null,
+      team_name: parsed.data.team_name || null,
+      default_job_label: parsed.data.default_job_label || null,
     })
     .eq("id", id);
 

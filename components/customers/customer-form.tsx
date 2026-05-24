@@ -20,7 +20,7 @@ export function CustomerForm() {
   const [serverError, setServerError] = useState<string | null>(null);
 
   const { register, handleSubmit, control, setValue, watch, formState: { errors } } = useForm<CustomerFormInput>({
-    defaultValues: { name: "", phone: "", primary_channel: "phone", note: "", channels: [] },
+    defaultValues: { name: "", phone: "", primary_channel: "phone", note: "", team_name: "", default_job_label: "", channels: [] },
   });
   const { fields, append, remove } = useFieldArray({ control, name: "channels" });
   const primaryChannel = watch("primary_channel");
@@ -67,9 +67,20 @@ export function CustomerForm() {
             </div>
           </div>
 
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="team_name">ชื่อทีม / หน่วยงาน</Label>
+              <Input id="team_name" {...register("team_name")} placeholder="เช่น ราชบุรี FC / โรงเรียน ABC" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="default_job_label">ชื่อไฟล์งาน (ใช้ตอนเปิด JOB)</Label>
+              <Input id="default_job_label" {...register("default_job_label")} placeholder="เช่น เสื้อบอลทีม / ชุดเชียร์" />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="note">หมายเหตุ</Label>
-            <Textarea id="note" {...register("note")} placeholder="ข้อมูลเพิ่มเติม เช่น ทีม / โรงเรียน / ส่วนลด" />
+            <Textarea id="note" {...register("note")} placeholder="ข้อมูลเพิ่มเติม เช่น สาขา / ส่วนลด" />
           </div>
         </CardContent>
       </Card>

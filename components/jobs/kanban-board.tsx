@@ -23,12 +23,14 @@ import { createClient } from "@/lib/supabase/client";
 type KanbanJob = {
   id: string;
   job_code: string;
+  job_label?: string | null;
   status: JobStatus;
   priority: PriorityLevel;
   quantity: number;
   sale_price: number;
   due_date: string | null;
   customers?: { name: string } | { name: string }[] | null;
+  thumbnail_url?: string | null;
 };
 
 export function KanbanBoard({ initialJobs }: { initialJobs: KanbanJob[] }) {
@@ -122,21 +124,33 @@ function KanbanCard({ job }: { job: KanbanJob }) {
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="touch-none">
       <Link href={`/jobs/${job.id}`} onClick={(e) => isDragging && e.preventDefault()}>
-        <Card className="border-border/60 transition hover:border-primary/50">
-          <CardContent className="space-y-2 p-3">
-            <div className="flex items-center justify-between">
+        <Card className="overflow-hidden border-border/60 transition hover:border-primary/50">
+          {job.thumbnail_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={job.thumbnail_url}
+              alt={`mockup ${job.job_code}`}
+              className="h-24 w-full object-cover"
+              draggable={false}
+            />
+          )}
+          <CardContent className="space-y-1.5 p-2.5">
+            <div className="flex items-center justify-between gap-1">
               <span className="font-mono text-xs font-bold">{job.job_code}</span>
               <Badge className={cn("h-5 px-1.5 text-[10px]", PRIORITY_COLOR[job.priority])}>
                 {PRIORITY_LABEL[job.priority]}
               </Badge>
             </div>
-            <div className="truncate text-sm">{customer?.name ?? "-"}</div>
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
+            {job.job_label && (
+              <div className="truncate text-xs font-medium text-foreground">{job.job_label}</div>
+            )}
+            <div className="truncate text-xs text-muted-foreground">👤 {customer?.name ?? "-"}</div>
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
               <span>{job.quantity} ตัว</span>
               <span className="tabular-nums">{formatBaht(Number(job.sale_price))}</span>
             </div>
             {job.due_date && (
-              <div className="text-xs text-muted-foreground">ส่ง: {formatDateShort(job.due_date)}</div>
+              <div className="text-[11px] text-muted-foreground">📅 {formatDateShort(job.due_date)}</div>
             )}
           </CardContent>
         </Card>
