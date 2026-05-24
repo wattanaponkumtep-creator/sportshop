@@ -1,0 +1,254 @@
+"use client";
+import { useState, useTransition, useRef } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Upload, FileSpreadsheet, CheckCircle2, X, ArrowRight, Sparkles } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { toast } from "@/components/ui/use-toast";
+import { parseRosterFile, type ParseResult, type ParsedRow } from "@/lib/parser/roster-excel";
+import { saveJobItems } from "@/app/(admin)/jobs/actions";
+
+export function RosterUpload({ jobId, onImported }: { jobId: string; onImported?: () => void }) {
+  const [parsed, setParsed] = useState<ParseResult | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(file: File) {
+    setFileName(file.name);
+    const buf = await file.arrayBuffer();
+    const result = parseRosterFile(buf);
+    setParsed(result);
+    if (!result.ok) {
+      toast({ title: "อ่านไฟล์ไม่สำเร็จ", description: result.error, variant: "destructive" });
+    } else {
+      toast({ title: `อ่านได้ ${result.totalRows} แถว`, description: "ตรวจสอบก่อนนำเข้า" });
+    }
+  }
+
+  function reset() {
+    setParsed(null);
+    setFileName(null);
+    if (inputRef.current) inputRef.current.value = "";
+  }
+
+  function handleImport() {
+    if (!parsed?.ok) return;
+    const items: ParsedRow[] = parsed.rows;
+    startTransition(async () => {
+      const result = await saveJobItems(jobId, items);
+      if (result.ok) {
+        toast({ title: `นำเข้า ${items.length} รายชื่อแล้ว ✅` });
+        reset();
+        onImported?.();
+      } else {
+        toast({ title: "บันทึกไม่สำเร็จ", description: result.error, variant: "destructive" });
+      }
+    });
+  }
+
+  function updateRow(idx: number, key: keyof ParsedRow, value: string) {
+    if (!parsed?.ok) return;
+    const newRows = parsed.rows.map((r, i) => (i === idx ? { ...r, [key]: value } : r));
+    setParsed({ ...parsed, rows: newRows });
+  }
+
+  function removeRow(idx: number) {
+    if (!parsed?.ok) return;
+    const newRows = parsed.rows.filter((_, i) => i !== idx);
+    setParsed({ ...parsed, rows: newRows, totalRows: newRows.length });
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="inline-flex items-center gap-2">
+          <FileSpreadsheet className="h-5 w-5 text-emerald-400" /> นำเข้ารายชื่อจาก Excel/CSV
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {!parsed ? (
+          <>
+            <div
+              className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-border bg-card/40 p-6 text-center transition hover:border-primary/50"
+              onClick={() => inputRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.add("border-primary");
+              }}
+              onDragLeave={(e) => e.currentTarget.classList.remove("border-primary")}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove("border-primary");
+                const file = e.dataTransfer.files[0];
+                if (file) handleFile(file);
+              }}
+            >
+              <Upload className="h-7 w-7 text-muted-foreground" />
+              <div className="text-sm font-medium">ลากไฟล์มาวาง หรือคลิกเลือก</div>
+              <div className="text-xs text-muted-foreground">รองรับ .xlsx, .xls, .csv</div>
+            </div>
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFile(file);
+              }}
+            />
+
+            <details className="rounded-md border border-border bg-card/30 p-3 text-xs">
+              <summary className="cursor-pointer font-medium">
+                <Sparkles className="mr-1 inline h-3 w-3 text-orange-400" />
+                Tip: เตรียมไฟล์ยังไงให้ระบบอ่านได้?
+              </summary>
+              <div className="mt-3 space-y-2 text-muted-foreground">
+                <p>ในแถวแรก (หัวตาราง) ใส่ชื่อ column เช่น:</p>
+                <div className="overflow-x-auto">
+                  <table className="border border-border text-[11px]">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="border border-border px-2 py-1">ชื่อ</th>
+                        <th className="border border-border px-2 py-1">เบอร์</th>
+                        <th className="border border-border px-2 py-1">ไซส์</th>
+                        <th className="border border-border px-2 py-1">สปอนเซอร์</th>
+                        <th className="border border-border px-2 py-1">หมายเหตุ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="border border-border px-2 py-1">สมชาย</td>
+                        <td className="border border-border px-2 py-1">9</td>
+                        <td className="border border-border px-2 py-1">L</td>
+                        <td className="border border-border px-2 py-1">SCB</td>
+                        <td className="border border-border px-2 py-1">-</td>
+                      </tr>
+                      <tr>
+                        <td className="border border-border px-2 py-1">มานี</td>
+                        <td className="border border-border px-2 py-1">7</td>
+                        <td className="border border-border px-2 py-1">M</td>
+                        <td className="border border-border px-2 py-1">SCB</td>
+                        <td className="border border-border px-2 py-1">แก้ขนาดให้ใหญ่</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p>ชื่อ column ที่รู้จัก: <strong>ชื่อ/name</strong>, <strong>เบอร์/number/no.</strong>, <strong>ไซส์/size</strong>, <strong>sponsor/สปอนเซอร์</strong>, <strong>หมายเหตุ/note/remark</strong></p>
+                <p>💡 ระบบจะข้ามแถวว่างเปล่าให้อัตโนมัติ</p>
+              </div>
+            </details>
+          </>
+        ) : !parsed.ok ? (
+          <div className="space-y-2">
+            <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
+              <strong className="text-destructive">อ่านไฟล์ไม่สำเร็จ:</strong> {parsed.error}
+            </div>
+            <Button variant="outline" size="sm" onClick={reset}>ลองใหม่</Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {/* Status */}
+            <div className="flex items-center justify-between rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3">
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                <div>
+                  <div className="font-medium">{fileName}</div>
+                  <div className="text-xs text-muted-foreground">
+                    อ่านได้ {parsed.totalRows} แถว · column ที่ตรวจเจอ:{" "}
+                    {Object.keys(parsed.detectedColumns).map((k) => (
+                      <Badge key={k} variant="outline" className="ml-1 text-[10px]">{k}</Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <Button variant="ghost" size="icon" onClick={reset}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Preview table */}
+            <div className="max-h-[400px] overflow-auto rounded-md border border-border">
+              <Table>
+                <TableHeader className="sticky top-0 bg-card">
+                  <TableRow>
+                    <TableHead className="w-10">#</TableHead>
+                    <TableHead>ชื่อ</TableHead>
+                    <TableHead className="w-16">เบอร์</TableHead>
+                    <TableHead className="w-16">ไซส์</TableHead>
+                    <TableHead>Sponsor</TableHead>
+                    <TableHead>หมายเหตุ</TableHead>
+                    <TableHead className="w-10"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {parsed.rows.map((r, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="text-center text-xs text-muted-foreground">{idx + 1}</TableCell>
+                      <TableCell>
+                        <input
+                          value={r.name}
+                          onChange={(e) => updateRow(idx, "name", e.target.value)}
+                          className="w-full bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <input
+                          value={r.number}
+                          onChange={(e) => updateRow(idx, "number", e.target.value)}
+                          className="w-full bg-transparent text-center font-mono text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <input
+                          value={r.size}
+                          onChange={(e) => updateRow(idx, "size", e.target.value)}
+                          className="w-full bg-transparent text-center font-mono text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <input
+                          value={r.sponsor}
+                          onChange={(e) => updateRow(idx, "sponsor", e.target.value)}
+                          className="w-full bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <input
+                          value={r.note}
+                          onChange={(e) => updateRow(idx, "note", e.target.value)}
+                          className="w-full bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" onClick={() => removeRow(idx)}>
+                          <X className="h-3 w-3 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs">
+              <span>
+                <strong className="text-amber-400">⚠️ คำเตือน:</strong> นำเข้าจะ <strong>ล้างรายชื่อเดิมใน JOB</strong> ทั้งหมด แล้วใส่ใหม่จากไฟล์
+              </span>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={reset} disabled={isPending}>ยกเลิก</Button>
+              <Button onClick={handleImport} disabled={isPending || parsed.rows.length === 0}>
+                {isPending ? "นำเข้า..." : `นำเข้า ${parsed.rows.length} รายชื่อ`}
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

@@ -21,6 +21,7 @@ import { ManualNotifyButton } from "@/components/jobs/manual-notify-button";
 import { DeleteJobButton } from "@/components/jobs/delete-job-button";
 import { WorkflowStepper } from "@/components/jobs/workflow-stepper";
 import { SizeSummary } from "@/components/jobs/size-summary";
+import { RosterUpload } from "@/components/jobs/roster-upload";
 import { QuickContact } from "@/components/jobs/quick-contact";
 import { NotifyCustomerDialog } from "@/components/jobs/notify-customer-dialog";
 import { ProductionStages } from "@/components/jobs/production-stages";
@@ -153,6 +154,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 
         <TabsContent value="items" className="mt-4 space-y-4">
           <SizeSummary items={items ?? []} />
+          <RosterUpload jobId={job.id} />
           <JobItemsEditor jobId={job.id} initialItems={items ?? []} />
         </TabsContent>
 
