@@ -124,7 +124,29 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
         )}
 
         {/* Latest Mockup */}
-        {job.latest_mockup && mockupSignedUrls.length > 0 && (
+        {!job.latest_mockup ? (
+          <Card>
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <ImageIcon className="h-4 w-4 text-muted-foreground" /> แบบเสื้อ Mockup
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                ทางร้านยังไม่ได้ส่งแบบเสื้อให้ดูครับ — รอแป๊บนึงนะครับ ✨
+              </p>
+            </CardContent>
+          </Card>
+        ) : mockupSignedUrls.length === 0 ? (
+          <Card>
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <ImageIcon className="h-4 w-4 text-amber-400" /> แบบเสื้อ Mockup
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                ⚠️ ไฟล์รูปยังไม่พร้อม — ติดต่อทางร้านครับ
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
           <Card>
             <CardContent className="p-5">
               <div className="mb-3 flex items-center justify-between gap-2">
