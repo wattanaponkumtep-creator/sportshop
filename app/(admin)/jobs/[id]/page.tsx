@@ -23,6 +23,7 @@ import { WorkflowStepper } from "@/components/jobs/workflow-stepper";
 import { SizeSummary } from "@/components/jobs/size-summary";
 import { RosterUpload } from "@/components/jobs/roster-upload";
 import { ItemTypeSummary } from "@/components/jobs/item-type-summary";
+import { ReceivingCheck } from "@/components/jobs/receiving-check";
 import { QuickContact } from "@/components/jobs/quick-contact";
 import { NotifyCustomerDialog } from "@/components/jobs/notify-customer-dialog";
 import { ProductionStages } from "@/components/jobs/production-stages";
@@ -155,6 +156,13 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
 
         <TabsContent value="items" className="mt-4 space-y-4">
           <ItemTypeSummary items={items ?? []} />
+          <ReceivingCheck
+            jobId={job.id}
+            items={items ?? []}
+            receivedCounts={(job.received_counts as Record<string, number>) ?? {}}
+            receivedCheckAt={(job.received_check_at as string | null) ?? null}
+            receivedCheckNote={(job.received_check_note as string | null) ?? null}
+          />
           <SizeSummary items={items ?? []} />
           <RosterUpload jobId={job.id} />
           <JobItemsEditor jobId={job.id} initialItems={items ?? []} />

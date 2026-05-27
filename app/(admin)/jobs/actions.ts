@@ -156,6 +156,50 @@ export async function saveJobItems(jobId: string, items: z.input<typeof itemSche
   return { ok: true as const };
 }
 
+// บันทึกจำนวนเสื้อที่ตรวจรับจากโรงงาน
+// counts รูปแบบ: { "เป็นชุด.M": 5, "เป็นชุด.L": 10, "เฉพาะเสื้อ.M": 3 }
+// (key = "type.size", value = count)
+export async function updateReceivingCounts(
+  jobId: string,
+  counts: Record<string, number>,
+  note?: string | null,
+) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Sanitize: เก็บเฉพาะ entry ที่ count > 0 และ key ถูกต้อง
+  const cleaned: Record<string, number> = {};
+  for (const [k, v] of Object.entries(counts)) {
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < 0) continue;
+    if (n === 0) continue;
+    cleaned[k] = Math.floor(n);
+  }
+
+  const { error } = await supabase
+    .from("jobs")
+    .update({
+      received_counts: cleaned,
+      received_check_at: new Date().toISOString(),
+      received_check_note: note?.trim() || null,
+    } as never)
+    .eq("id", jobId);
+
+  if (error) return { ok: false as const, error: error.message };
+
+  // เขียน timeline
+  const total = Object.values(cleaned).reduce((s, n) => s + n, 0);
+  await supabase.from("job_timeline").insert({
+    job_id: jobId,
+    event_type: "received_check",
+    description: `ตรวจรับเสื้อ — นับได้ ${total} ตัว${note ? ` (${note})` : ""}`,
+    actor_id: user?.id ?? null,
+  });
+
+  revalidatePath(`/jobs/${jobId}`);
+  return { ok: true as const };
+}
+
 export async function addTimelineEvent(jobId: string, eventType: string, description: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
