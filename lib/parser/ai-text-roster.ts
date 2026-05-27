@@ -1,6 +1,6 @@
 import "server-only";
 
-const GEMINI_MODEL = "gemini-1.5-flash";
+const GEMINI_MODEL = "gemini-2.0-flash";
 
 export type TextParsedRow = {
   name: string;

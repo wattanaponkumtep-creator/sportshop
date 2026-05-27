@@ -1,7 +1,7 @@
 import "server-only";
 import type { ParsedRow } from "./roster-excel";
 
-const GEMINI_MODEL = "gemini-1.5-flash";
+const GEMINI_MODEL = "gemini-2.0-flash";
 
 type GeminiResponse = {
   candidates?: Array<{
