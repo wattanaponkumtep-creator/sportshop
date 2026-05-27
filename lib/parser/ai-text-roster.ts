@@ -1,6 +1,12 @@
 import "server-only";
 
-const GEMINI_MODEL = "gemini-2.0-flash";
+// ลำดับ fallback: ถ้า model หลักโควต้าหมด ลอง model ถัดไป
+const GEMINI_MODELS = [
+  "gemini-2.5-flash",        // หลัก — ฉลาดสุด, free 1,500/day
+  "gemini-2.5-flash-lite",   // สำรอง 1 — เร็วกว่า, โควต้าเยอะ
+  "gemini-2.0-flash",        // สำรอง 2
+  "gemini-2.0-flash-lite",   // สำรอง 3
+];
 
 export type TextParsedRow = {
   name: string;
@@ -108,47 +114,78 @@ export async function parseRosterText(
     return { ok: false, error: "ข้อความยาวเกินไป (เกิน 50,000 ตัวอักษร)" };
   }
 
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+  const body = JSON.stringify({
+    contents: [
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: PROMPT },
-                { text: "\n\n--- ข้อความที่ต้องอ่าน ---\n" + text },
-              ],
-            },
-          ],
-          generationConfig: {
-            responseMimeType: "application/json",
-            temperature: 0.1,
-            maxOutputTokens: 8192,
-          },
-        }),
+        parts: [
+          { text: PROMPT },
+          { text: "\n\n--- ข้อความที่ต้องอ่าน ---\n" + text },
+        ],
+      },
+    ],
+    generationConfig: {
+      responseMimeType: "application/json",
+      temperature: 0.1,
+      maxOutputTokens: 8192,
+    },
+  });
+
+  let lastError = "ไม่สามารถเชื่อมต่อ AI ได้";
+
+  // ลองทีละ model — ถ้าเจอ 429 (quota) ให้ลอง model ถัดไป
+  for (const model of GEMINI_MODELS) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+        }
+      );
+
+      if (response.status === 429) {
+        lastError = `Model ${model}: โควต้าหมด (429)`;
+        continue; // ลอง model ถัดไป
       }
-    );
+      if (response.status === 404) {
+        lastError = `Model ${model}: ไม่พบ (404)`;
+        continue;
+      }
+      if (!response.ok) {
+        const errText = await response.text();
+        lastError = `Gemini API error ${response.status}: ${errText.slice(0, 300)}`;
+        continue;
+      }
 
-    if (!response.ok) {
-      const errText = await response.text();
-      return { ok: false, error: `Gemini API error ${response.status}: ${errText}` };
+      const data = (await response.json()) as GeminiResponse;
+      if (data.error) {
+        lastError = data.error.message ?? "AI error";
+        continue;
+      }
+
+      const textOut = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+      if (!textOut) {
+        lastError = "AI ไม่ตอบข้อมูล";
+        continue;
+      }
+
+      const parsed = extractJsonArray(textOut);
+      if (!parsed) {
+        lastError = "AI ตอบผิดรูปแบบ";
+        continue;
+      }
+
+      const rows = normalize(parsed);
+      return { ok: true, rows };
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : "Unknown error";
     }
-
-    const data = (await response.json()) as GeminiResponse;
-    if (data.error) return { ok: false, error: data.error.message ?? "AI error" };
-
-    const textOut = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-    if (!textOut) return { ok: false, error: "AI ไม่ตอบข้อมูล" };
-
-    const parsed = extractJsonArray(textOut);
-    if (!parsed) return { ok: false, error: "AI ตอบผิดรูปแบบ ลองอีกครั้ง" };
-
-    const rows = normalize(parsed);
-    return { ok: true, rows };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "Unknown error" };
   }
+
+  // ทุก model ล้มเหลว
+  return {
+    ok: false,
+    error: `AI ทุกตัวสำรองล้มเหลว (โควต้าหมดทั้งวัน?) — ${lastError}\n\nวิธีแก้:\n1. รอจนถึงเที่ยงคืน (โควต้า reset)\n2. หรือเปิด billing ที่ ai.google.dev\n3. หรือใช้วิธี Excel/CSV upload แทน`,
+  };
 }
