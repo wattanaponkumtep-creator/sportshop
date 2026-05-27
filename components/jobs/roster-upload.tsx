@@ -3,7 +3,7 @@ import { useState, useTransition, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileSpreadsheet, CheckCircle2, X, ArrowRight, Sparkles } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, X, ArrowRight, Sparkles, FileText, Loader2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/components/ui/use-toast";
 import { parseRosterFile, type ParseResult, type ParsedRow } from "@/lib/parser/roster-excel";
@@ -12,11 +12,50 @@ import { saveJobItems } from "@/app/(admin)/jobs/actions";
 export function RosterUpload({ jobId, onImported }: { jobId: string; onImported?: () => void }) {
   const [parsed, setParsed] = useState<ParseResult | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function handleFile(file: File) {
     setFileName(file.name);
+    const ext = file.name.toLowerCase().split(".").pop() ?? "";
+    const aiTypes = ["pdf", "png", "jpg", "jpeg", "webp"];
+
+    if (aiTypes.includes(ext)) {
+      // Use AI parsing for PDF/images
+      setAiLoading(true);
+      setParsed(null);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch("/api/parse-roster", { method: "POST", body: formData });
+        const data = (await res.json()) as { ok: boolean; rows?: ParsedRow[]; error?: string };
+
+        if (!data.ok) {
+          setParsed({ ok: false, error: data.error ?? "AI parse failed" });
+          toast({ title: "AI อ่านไฟล์ไม่สำเร็จ", description: data.error, variant: "destructive" });
+        } else {
+          const rows = data.rows ?? [];
+          setParsed({
+            ok: true,
+            rows,
+            detectedColumns: { name: 0, number: 1, size: 2, sponsor: 3, note: 4 },
+            headerRow: ["name", "number", "size", "sponsor", "note"],
+            totalRows: rows.length,
+          });
+          toast({ title: `AI อ่านได้ ${rows.length} แถว`, description: "ตรวจสอบก่อนนำเข้า" });
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Network error";
+        setParsed({ ok: false, error: msg });
+        toast({ title: "AI อ่านไฟล์ไม่สำเร็จ", description: msg, variant: "destructive" });
+      } finally {
+        setAiLoading(false);
+      }
+      return;
+    }
+
+    // Excel/CSV — use local parser
     const buf = await file.arrayBuffer();
     const result = parseRosterFile(buf);
     setParsed(result);
@@ -68,7 +107,13 @@ export function RosterUpload({ jobId, onImported }: { jobId: string; onImported?
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {!parsed ? (
+        {aiLoading ? (
+          <div className="flex flex-col items-center justify-center gap-3 rounded-md border-2 border-dashed border-primary/40 bg-primary/5 p-8 text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="text-sm font-medium">AI กำลังอ่านไฟล์...</div>
+            <div className="text-xs text-muted-foreground">โดยทั่วไปใช้เวลา 10-30 วินาที</div>
+          </div>
+        ) : !parsed ? (
           <>
             <div
               className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-border bg-card/40 p-6 text-center transition hover:border-primary/50"
@@ -87,12 +132,19 @@ export function RosterUpload({ jobId, onImported }: { jobId: string; onImported?
             >
               <Upload className="h-7 w-7 text-muted-foreground" />
               <div className="text-sm font-medium">ลากไฟล์มาวาง หรือคลิกเลือก</div>
-              <div className="text-xs text-muted-foreground">รองรับ .xlsx, .xls, .csv</div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Badge variant="outline" className="gap-1 text-[10px]">
+                  <FileSpreadsheet className="h-3 w-3" /> .xlsx .csv (ฟรี/เร็ว)
+                </Badge>
+                <Badge variant="outline" className="gap-1 text-[10px]">
+                  <FileText className="h-3 w-3" /> .pdf .png .jpg (AI)
+                </Badge>
+              </div>
             </div>
             <input
               ref={inputRef}
               type="file"
-              accept=".xlsx,.xls,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              accept=".xlsx,.xls,.csv,.pdf,.png,.jpg,.jpeg,.webp"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
