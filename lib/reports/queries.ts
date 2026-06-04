@@ -23,12 +23,17 @@ export function getMonthBoundsBangkok(monthsAgo = 0) {
 
 export type ReportJob = Pick<
   Job,
-  "id" | "status" | "sale_price" | "cost" | "shipping_cost" | "other_cost" | "quantity" | "received_at" | "due_date" | "customer_id" | "factory_id"
+  "id" | "status" | "sale_price" | "cost" | "shipping_cost" | "other_cost" | "quantity" | "received_at" | "due_date" | "updated_at" | "customer_id" | "factory_id"
 > & {
   customers?: { name: string } | { name: string }[] | null;
   factories?: { name: string } | { name: string }[] | null;
   job_timeline?: { event_type: string; created_at: string }[];
 };
+
+// "ปิดงาน" = สถานะ shipped หรือ completed
+function isClosed(j: ReportJob): boolean {
+  return j.status === "shipped" || j.status === "completed";
+}
 
 export function calcRevenue(jobs: ReportJob[]) {
   return jobs
@@ -61,12 +66,13 @@ export async function getReportData() {
   const allTimeStart = sixMonthsBack.start;
 
   const [{ data: jobs }, { data: paymentsData }] = await Promise.all([
+    // Look back further so we catch jobs received earlier but closed within the report window
     supabase
       .from("jobs")
       .select(
-        "id, status, sale_price, cost, shipping_cost, other_cost, quantity, received_at, due_date, customer_id, factory_id, customers(name), factories(name)"
+        "id, status, sale_price, cost, shipping_cost, other_cost, quantity, received_at, due_date, updated_at, customer_id, factory_id, customers(name), factories(name)"
       )
-      .gte("received_at", allTimeStart)
+      .or(`received_at.gte.${allTimeStart},updated_at.gte.${allTimeStart}`)
       .order("received_at", { ascending: false }),
     supabase
       .from("payments")
@@ -77,24 +83,37 @@ export async function getReportData() {
   const allJobs = (jobs ?? []) as ReportJob[];
   const allPayments = (paymentsData ?? []) as { type: string; amount: number; paid_at: string; job_id: string }[];
 
-  const monthly: { label: string; revenue: number; profit: number; count: number; cashIn: number }[] = [];
+  const monthly: {
+    label: string;
+    revenue: number;        // ยอดขายจากงานที่ "ปิดเดือนนี้" (shipped/completed)
+    profit: number;
+    closedCount: number;    // จำนวนงานที่ปิดเดือนนี้
+    newCount: number;       // จำนวนงานใหม่ที่รับเข้าเดือนนี้
+    cashIn: number;         // เงินสดเข้าเดือนนี้
+  }[] = [];
   for (let i = 5; i >= 0; i--) {
     const m = getMonthBoundsBangkok(i);
-    const monthJobs = allJobs.filter(
-      (j) => j.received_at >= m.start && j.received_at < m.end
+    // งานปิดเดือนนี้ = closed (shipped/completed) AND updated_at อยู่ในเดือนนี้
+    const closedThisMonth = allJobs.filter(
+      (j) => isClosed(j) && j.updated_at >= m.start && j.updated_at < m.end,
+    );
+    // งานใหม่เดือนนี้ = received_at อยู่ในเดือนนี้
+    const newThisMonth = allJobs.filter(
+      (j) => j.received_at >= m.start && j.received_at < m.end,
     );
     const monthPayments = allPayments.filter(
-      (p) => p.paid_at >= m.start && p.paid_at < m.end
+      (p) => p.paid_at >= m.start && p.paid_at < m.end,
     );
     const cashIn = monthPayments.reduce(
       (sum, p) => sum + (p.type === "refund" ? -Number(p.amount) : Number(p.amount)),
-      0
+      0,
     );
     monthly.push({
       label: m.label,
-      revenue: calcRevenue(monthJobs),
-      profit: calcProfit(monthJobs),
-      count: monthJobs.length,
+      revenue: calcRevenue(closedThisMonth),
+      profit: calcProfit(closedThisMonth),
+      closedCount: closedThisMonth.length,
+      newCount: newThisMonth.length,
       cashIn,
     });
   }

@@ -32,6 +32,7 @@ export default async function ReportsPage() {
           changePositive={revChange >= 0}
           icon={DollarSign}
           iconColor="text-emerald-400"
+          hint="จากงานที่ปิดเดือนนี้"
         />
         <KpiCard
           label="กำไรเดือนนี้"
@@ -43,9 +44,9 @@ export default async function ReportsPage() {
           hint={`Margin: ${margin.toFixed(1)}%`}
         />
         <KpiCard
-          label="งานเดือนนี้"
-          value={data.thisMonth.count.toString()}
-          changeText={`เทียบเดือนที่แล้ว ${data.lastMonth.count} งาน`}
+          label="งานปิดเดือนนี้"
+          value={data.thisMonth.closedCount.toString()}
+          changeText={`งานใหม่ ${data.thisMonth.newCount} · เดือนก่อน ${data.lastMonth.closedCount} ปิด`}
           icon={Briefcase}
           iconColor="text-blue-400"
         />
