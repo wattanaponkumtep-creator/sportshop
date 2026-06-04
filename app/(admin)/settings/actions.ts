@@ -71,17 +71,20 @@ export async function updateShopInfo(input: ShopInfoInput) {
 
   const supabase = await createClient();
 
-  // Upsert row id=1 (single-row table)
-  const { error } = await supabase.from("shop_info").upsert({
-    id: 1,
-    shop_name: parsed.data.shop_name,
-    address: parsed.data.address || null,
-    phone: parsed.data.phone || null,
-    email: parsed.data.email || null,
-    tax_id: parsed.data.tax_id || null,
-    bank_info: parsed.data.bank_info || null,
-    updated_at: new Date().toISOString(),
-  });
+  // shop_info is a single-row table; row id=1 is seeded by migration 0005.
+  // Use UPDATE (not upsert) — RLS only allows SELECT + UPDATE on this table.
+  const { error } = await supabase
+    .from("shop_info")
+    .update({
+      shop_name: parsed.data.shop_name,
+      address: parsed.data.address || null,
+      phone: parsed.data.phone || null,
+      email: parsed.data.email || null,
+      tax_id: parsed.data.tax_id || null,
+      bank_info: parsed.data.bank_info || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", 1);
 
   if (error) return { ok: false as const, error: error.message };
 

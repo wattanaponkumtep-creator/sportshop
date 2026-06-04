@@ -114,12 +114,19 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           />
           <NotifyCustomerDialog
             jobCode={job.job_code}
+            jobLabel={job.job_label}
             productType={job.product_type}
             status={job.status}
             trackToken={job.track_token}
             customerName={customer?.name ?? ""}
             phone={customer?.phone ?? null}
             channels={customerChannels ?? []}
+            salePrice={Number(job.sale_price)}
+            totalPaid={(payments ?? []).reduce(
+              (s, p) => s + (p.type === "refund" ? -Number(p.amount) : Number(p.amount)),
+              0,
+            )}
+            shopInfo={shopInfo ? { shop_name: shopInfo.shop_name, bank_info: shopInfo.bank_info } : null}
           />
           <CopyTrackLink trackToken={job.track_token} />
           <ManualNotifyButton jobId={job.id} />

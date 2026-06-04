@@ -1,8 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -13,9 +14,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Send, MessageCircle, MessageSquare, Phone, Copy, Check, Info } from "lucide-react";
+import { Send, MessageCircle, MessageSquare, Phone, Copy, Check, Info, Wallet, Sparkles } from "lucide-react";
 import { JOB_STATUS_LABEL } from "@/lib/constants";
 import type { JobStatus } from "@/lib/types/database";
+import { formatBaht, cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 
 const STATUS_MESSAGES: Partial<Record<JobStatus, string>> = {
@@ -30,49 +32,150 @@ const STATUS_MESSAGES: Partial<Record<JobStatus, string>> = {
   completed: "งานเสร็จสมบูรณ์แล้วครับ ขอบคุณที่ใช้บริการ 🙏",
 };
 
+// Statuses where bundling a payment request feels natural:
+//   - received: ask for deposit before starting
+//   - ready_to_ship: ask for balance before shipping
+//   - completed: final receipt / settle remaining
+const NATURAL_PAYMENT_STATUSES: JobStatus[] = ["received", "ready_to_ship", "completed"];
+
+type Preset = "deposit" | "balance" | "full" | "custom";
+
+const PRESET_META: Record<Preset, { label: string; tone: string }> = {
+  deposit: { label: "💰 มัดจำ 50%", tone: "ขอมัดจำเริ่มงาน" },
+  balance: { label: "💵 ที่ค้าง", tone: "ส่วนที่เหลือก่อนส่งของ" },
+  full: { label: "💯 เต็มจำนวน", tone: "ขอเต็มจำนวนรวด" },
+  custom: { label: "✏️ กำหนดเอง", tone: "ระบุยอดเอง" },
+};
+
+function suggestPresetForStatus(status: JobStatus, totalPaid: number): Preset {
+  if (status === "received" && totalPaid === 0) return "deposit";
+  if (status === "ready_to_ship" || status === "completed") return "balance";
+  return "deposit";
+}
+
 type Channel = {
   channel_type: string;
   external_id: string | null;
   display_name: string | null;
 };
 
+type ShopInfo = {
+  shop_name: string | null;
+  bank_info: string | null;
+};
+
 export function NotifyCustomerDialog({
   jobCode,
+  jobLabel,
   productType,
   status,
   trackToken,
   customerName,
   phone,
   channels,
+  salePrice,
+  totalPaid,
+  shopInfo,
 }: {
   jobCode: string;
+  jobLabel?: string | null;
   productType: string | null;
   status: JobStatus;
   trackToken: string;
   customerName: string;
   phone: string | null;
   channels: Channel[];
+  salePrice?: number;
+  totalPaid?: number;
+  shopInfo?: ShopInfo | null;
 }) {
   const [open, setOpen] = useState(false);
 
   const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
   const trackUrl = `${siteUrl}/track/${trackToken}`;
 
-  const defaultMessage = [
-    `📦 อัปเดตงาน ${jobCode}`,
-    "",
-    productType ? `📋 ${productType}` : null,
-    `🔔 สถานะ: ${JOB_STATUS_LABEL[status]}`,
-    "",
-    STATUS_MESSAGES[status] ?? "อัปเดตสถานะงานของคุณครับ",
-    "",
-    `🔗 ติดตามได้ที่: ${trackUrl}`,
-  ]
-    .filter(Boolean)
-    .join("\n");
+  // Payment context
+  const sale = Number(salePrice ?? 0);
+  const paid = Number(totalPaid ?? 0);
+  const outstanding = Math.max(0, sale - paid);
+  const hasOutstanding = outstanding > 0;
+  const isNaturalForPayment = NATURAL_PAYMENT_STATUSES.includes(status);
+
+  // Smart default: include payment if there's outstanding AND status is "natural"
+  const [includePayment, setIncludePayment] = useState(hasOutstanding && isNaturalForPayment);
+  const [preset, setPreset] = useState<Preset>(suggestPresetForStatus(status, paid));
+  const [depositPct, setDepositPct] = useState(50);
+  const [customAmount, setCustomAmount] = useState(outstanding.toString());
+
+  const requestedAmount = useMemo(() => {
+    switch (preset) {
+      case "deposit":
+        return Math.round((sale * depositPct) / 100);
+      case "balance":
+        return outstanding;
+      case "full":
+        return sale;
+      case "custom":
+        return Math.max(0, Number(customAmount) || 0);
+    }
+  }, [preset, sale, outstanding, depositPct, customAmount]);
+
+  // Status part of message
+  const statusBlock = useMemo(
+    () =>
+      [
+        `📦 อัปเดตงาน ${jobCode}`,
+        "",
+        jobLabel ? `📌 ${jobLabel}` : null,
+        productType ? `📋 ${productType}` : null,
+        `🔔 สถานะ: ${JOB_STATUS_LABEL[status]}`,
+        "",
+        STATUS_MESSAGES[status] ?? "อัปเดตสถานะงานของคุณครับ",
+        "",
+        `🔗 ติดตามได้ที่: ${trackUrl}`,
+      ]
+        .filter((l) => l !== null)
+        .join("\n"),
+    [jobCode, jobLabel, productType, status, trackUrl],
+  );
+
+  // Payment block — only built if includePayment + hasOutstanding
+  const paymentBlock = useMemo(() => {
+    if (!includePayment || !hasOutstanding) return "";
+    const lines: string[] = [];
+    lines.push("━━━━━━━━━━━━━━━━━━");
+    if (preset === "deposit" && paid === 0) {
+      lines.push(`💰 ขอมัดจำ: ${formatBaht(requestedAmount)} (${depositPct}% จาก ${formatBaht(sale)})`);
+    } else if (preset === "balance") {
+      lines.push(`💵 ขอเก็บส่วนที่เหลือ: ${formatBaht(requestedAmount)}`);
+      if (paid > 0) lines.push(`(ยอดรวม ${formatBaht(sale)} • ชำระแล้ว ${formatBaht(paid)})`);
+    } else if (preset === "full") {
+      lines.push(`💯 ขอเก็บเต็มจำนวน: ${formatBaht(requestedAmount)}`);
+    } else {
+      lines.push(`💰 ขอเก็บ: ${formatBaht(requestedAmount)}`);
+    }
+    lines.push("");
+    lines.push("💳 ช่องทางชำระ:");
+    if (shopInfo?.bank_info?.trim()) {
+      lines.push(shopInfo.bank_info.trim());
+    } else {
+      lines.push("(ยังไม่ได้ตั้งข้อมูลบัญชี — Settings → ข้อมูลร้าน)");
+    }
+    lines.push("");
+    lines.push("📩 หลังโอนกรุณาส่งสลิปกลับมาด้วยครับ");
+    return lines.join("\n");
+  }, [includePayment, hasOutstanding, preset, paid, sale, requestedAmount, depositPct, shopInfo]);
+
+  const defaultMessage = paymentBlock ? `${statusBlock}\n\n${paymentBlock}` : statusBlock;
 
   const [message, setMessage] = useState(defaultMessage);
+  const [messageDirty, setMessageDirty] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Auto-sync message when user changes preset/checkbox AND hasn't edited manually
+  if (!messageDirty && message !== defaultMessage) {
+    setMessage(defaultMessage);
+  }
 
   function handleCopy() {
     navigator.clipboard.writeText(message);
@@ -83,9 +186,7 @@ export function NotifyCustomerDialog({
 
   function openLineShare() {
     const encoded = encodeURIComponent(message);
-    // LINE share URL — opens LINE app to pick recipient
-    const url = `https://line.me/R/msg/text/?${encoded}`;
-    window.open(url, "_blank");
+    window.open(`https://line.me/R/msg/text/?${encoded}`, "_blank");
   }
 
   function openMessenger() {
@@ -94,12 +195,10 @@ export function NotifyCustomerDialog({
       toast({ title: "ลูกค้ายังไม่ได้เชื่อม Facebook", variant: "destructive" });
       return;
     }
-    // Copy message first, then open chat
     navigator.clipboard.writeText(message);
     toast({ title: "Copy ข้อความแล้ว — paste ใน Messenger ที่เปิดให้" });
     const id = fbChannels[0].external_id;
-    const url = id ? `https://m.me/${id}` : "https://m.me/";
-    window.open(url, "_blank");
+    window.open(id ? `https://m.me/${id}` : "https://m.me/", "_blank");
   }
 
   function openSMS() {
@@ -108,9 +207,7 @@ export function NotifyCustomerDialog({
       return;
     }
     const cleanPhone = phone.replace(/\D/g, "");
-    const encoded = encodeURIComponent(message);
-    const url = `sms:${cleanPhone}?body=${encoded}`;
-    window.location.href = url;
+    window.location.href = `sms:${cleanPhone}?body=${encodeURIComponent(message)}`;
   }
 
   function openWhatsApp() {
@@ -119,10 +216,8 @@ export function NotifyCustomerDialog({
       return;
     }
     let cleanPhone = phone.replace(/\D/g, "");
-    if (cleanPhone.startsWith("0")) cleanPhone = "66" + cleanPhone.slice(1); // TH country code
-    const encoded = encodeURIComponent(message);
-    const url = `https://wa.me/${cleanPhone}?text=${encoded}`;
-    window.open(url, "_blank");
+    if (cleanPhone.startsWith("0")) cleanPhone = "66" + cleanPhone.slice(1);
+    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, "_blank");
   }
 
   function callPhone() {
@@ -152,19 +247,133 @@ export function NotifyCustomerDialog({
         </DialogHeader>
 
         <div className="space-y-3">
+          {/* Include payment checkbox (only if there's outstanding) */}
+          {hasOutstanding && (
+            <div
+              className={cn(
+                "rounded-lg border p-3 transition",
+                includePayment
+                  ? "border-emerald-500/40 bg-emerald-500/5"
+                  : "border-border bg-card/40",
+              )}
+            >
+              <label className="flex cursor-pointer items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={includePayment}
+                  onChange={(e) => {
+                    setIncludePayment(e.target.checked);
+                    setMessageDirty(false);
+                  }}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-500"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5 text-sm font-medium">
+                    <Wallet className="h-3.5 w-3.5 text-emerald-400" />
+                    รวมแจ้งขอเก็บเงิน ({formatBaht(outstanding)} ค้าง)
+                    {isNaturalForPayment && (
+                      <Badge className="bg-amber-500/20 text-[10px] text-amber-300">
+                        <Sparkles className="mr-0.5 h-2.5 w-2.5" /> แนะนำ
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-muted-foreground">
+                    {isNaturalForPayment
+                      ? `สถานะ "${JOB_STATUS_LABEL[status]}" เป็นจังหวะที่เหมาะแจ้งชำระ`
+                      : "ติ๊กเพื่อรวมข้อมูลชำระเงินในข้อความเดียวกัน"}
+                  </div>
+                </div>
+              </label>
+
+              {/* Preset selector + amount config */}
+              {includePayment && (
+                <div className="mt-3 space-y-2 border-t border-emerald-500/20 pt-3">
+                  <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                    {(Object.keys(PRESET_META) as Preset[]).map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => {
+                          setPreset(p);
+                          setMessageDirty(false);
+                        }}
+                        className={cn(
+                          "rounded-md border-2 px-2 py-1.5 text-[11px] transition",
+                          preset === p
+                            ? "border-emerald-400 bg-emerald-500/15 font-semibold"
+                            : "border-border bg-card/60 text-muted-foreground hover:border-emerald-400/40",
+                        )}
+                      >
+                        {PRESET_META[p].label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {preset === "deposit" && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-muted-foreground">มัดจำ:</span>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={depositPct}
+                        onChange={(e) => {
+                          setDepositPct(Math.max(0, Math.min(100, Number(e.target.value) || 0)));
+                          setMessageDirty(false);
+                        }}
+                        className="h-7 w-16 text-center"
+                      />
+                      <span className="text-muted-foreground">% =</span>
+                      <span className="font-mono font-bold text-emerald-400">{formatBaht(requestedAmount)}</span>
+                    </div>
+                  )}
+                  {preset === "custom" && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-muted-foreground">จำนวน:</span>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={customAmount}
+                        onChange={(e) => {
+                          setCustomAmount(e.target.value);
+                          setMessageDirty(false);
+                        }}
+                        className="h-7 flex-1"
+                      />
+                      <span className="text-xs text-muted-foreground">บาท</span>
+                    </div>
+                  )}
+
+                  {!shopInfo?.bank_info?.trim() && (
+                    <div className="rounded border border-amber-500/30 bg-amber-500/10 p-1.5 text-[10px] text-amber-200">
+                      ⚠️ ยังไม่ได้ตั้งข้อมูลบัญชี — ไปที่ <strong>Settings → ข้อมูลร้าน</strong>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label className="text-xs">ข้อความที่จะส่ง (แก้ได้)</Label>
             <Textarea
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={9}
+              onChange={(e) => {
+                setMessage(e.target.value);
+                setMessageDirty(true);
+              }}
+              rows={includePayment ? 14 : 9}
               className="text-xs"
             />
             <div className="flex justify-between text-[10px] text-muted-foreground">
               <span>{message.length} ตัวอักษร</span>
               <button
                 type="button"
-                onClick={() => setMessage(defaultMessage)}
+                onClick={() => {
+                  setMessage(defaultMessage);
+                  setMessageDirty(false);
+                }}
                 className="hover:text-foreground"
               >
                 รีเซ็ตเป็นค่าเริ่มต้น
@@ -175,7 +384,6 @@ export function NotifyCustomerDialog({
           <div className="space-y-2">
             <Label className="text-xs">เลือกช่องทางส่ง</Label>
             <div className="grid gap-2 sm:grid-cols-2">
-              {/* LINE - always available (share dialog lets pick recipient) */}
               <Button
                 variant="outline"
                 onClick={openLineShare}
@@ -192,7 +400,6 @@ export function NotifyCustomerDialog({
                 </div>
               </Button>
 
-              {/* WhatsApp (uses phone) */}
               {phone && (
                 <Button
                   variant="outline"
@@ -209,7 +416,6 @@ export function NotifyCustomerDialog({
                 </Button>
               )}
 
-              {/* Messenger (if customer has FB linked) */}
               {hasFB && (
                 <Button
                   variant="outline"
@@ -226,13 +432,8 @@ export function NotifyCustomerDialog({
                 </Button>
               )}
 
-              {/* SMS */}
               {phone && (
-                <Button
-                  variant="outline"
-                  onClick={openSMS}
-                  className="justify-start"
-                >
+                <Button variant="outline" onClick={openSMS} className="justify-start">
                   <div className="flex h-7 w-7 items-center justify-center rounded-md bg-orange-500/15">
                     <MessageSquare className="h-4 w-4 text-orange-400" />
                   </div>
@@ -243,13 +444,8 @@ export function NotifyCustomerDialog({
                 </Button>
               )}
 
-              {/* Call */}
               {phone && (
-                <Button
-                  variant="outline"
-                  onClick={callPhone}
-                  className="justify-start"
-                >
+                <Button variant="outline" onClick={callPhone} className="justify-start">
                   <div className="flex h-7 w-7 items-center justify-center rounded-md bg-cyan-500/15">
                     <Phone className="h-4 w-4 text-cyan-400" />
                   </div>
@@ -260,7 +456,6 @@ export function NotifyCustomerDialog({
                 </Button>
               )}
 
-              {/* Copy */}
               <Button
                 variant="outline"
                 onClick={handleCopy}
@@ -286,24 +481,6 @@ export function NotifyCustomerDialog({
               </div>
             )}
           </div>
-
-          <details className="rounded-md border border-border bg-card/30 p-3 text-xs">
-            <summary className="cursor-pointer font-medium">💡 วิธีใช้แต่ละช่องทาง</summary>
-            <ul className="mt-3 space-y-1.5 text-muted-foreground">
-              <li>
-                <strong className="text-foreground">LINE:</strong> เปิด LINE app → เลือกห้องแชทกับลูกค้า → กดส่ง
-              </li>
-              <li>
-                <strong className="text-foreground">WhatsApp:</strong> เปิด chat กับเบอร์ลูกค้าทันที → กดส่ง
-              </li>
-              <li>
-                <strong className="text-foreground">Messenger:</strong> ข้อความถูก copy ให้แล้ว → paste ในแอป Messenger
-              </li>
-              <li>
-                <strong className="text-foreground">SMS:</strong> เปิดแอป SMS พร้อมข้อความ → กดส่ง
-              </li>
-            </ul>
-          </details>
         </div>
 
         <DialogFooter>
