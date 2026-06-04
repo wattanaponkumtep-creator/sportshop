@@ -37,19 +37,33 @@ function sortSizes(sizes: string[]): string[] {
 
 function iconForType(t: string): { emoji: string; color: string } {
   const lower = t.toLowerCase();
-  if (t.includes("ชุด") || t.includes("เซ็ต") || lower.includes("set")) {
+  const hasShirt = t.includes("เสื้อ") || lower.includes("shirt") || lower.includes("jersey");
+  const hasPants = t.includes("กางเกง") || lower.includes("pants");
+  const isLongSleeve = t.includes("แขนยาว") || lower.includes("long sleeve") || lower.includes("long-sleeve");
+  const isShortSleeve = t.includes("แขนสั้น") || lower.includes("short sleeve") || lower.includes("short-sleeve");
+
+  // Combined shirt+pants set
+  if ((hasShirt && hasPants) || t.includes("ชุด") || t.includes("เซ็ต") || lower.includes("set")) {
+    if (isLongSleeve) return { emoji: "🥋", color: "text-indigo-400" };
     return { emoji: "🩳", color: "text-orange-400" };
-  }
-  if (t.includes("กางเกง") || lower.includes("pants") || lower.includes("short")) {
-    return { emoji: "👖", color: "text-blue-400" };
   }
   if (t.includes("ถุงเท้า") || lower.includes("sock")) {
     return { emoji: "🧦", color: "text-purple-400" };
   }
-  if (t.includes("ปลอกแขน") || lower.includes("sleeve")) {
+  if (t.includes("ปลอกแขน")) {
     return { emoji: "💪", color: "text-pink-400" };
   }
-  if (t.includes("เสื้อ") || lower.includes("shirt") || lower.includes("jersey")) {
+  if (hasPants) {
+    return { emoji: "👖", color: "text-blue-400" };
+  }
+  // Shirts (any sleeve variant)
+  if (isLongSleeve) {
+    return { emoji: "🥼", color: "text-teal-400" };
+  }
+  if (isShortSleeve) {
+    return { emoji: "👕", color: "text-cyan-400" };
+  }
+  if (hasShirt) {
     return { emoji: "👕", color: "text-cyan-400" };
   }
   return { emoji: "📦", color: "text-muted-foreground" };
