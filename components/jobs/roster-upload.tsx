@@ -8,6 +8,36 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "@/components/ui/use-toast";
 import { parseRosterFile, type ParseResult, type ParsedRow } from "@/lib/parser/roster-excel";
 import { saveJobItems } from "@/app/(admin)/jobs/actions";
+import { ITEM_TYPE_PRESETS } from "@/lib/constants";
+
+function ItemTypeSummary({ rows }: { rows: ParsedRow[] }) {
+  const summary = new Map<string, number>();
+  let total = 0;
+  for (const r of rows) {
+    const t = r.item_type?.trim() || "ไม่ระบุประเภท";
+    const qty = r.quantity ?? 1;
+    summary.set(t, (summary.get(t) ?? 0) + qty);
+    total += qty;
+  }
+  if (summary.size === 0) return null;
+  return (
+    <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3">
+      <div className="mb-2 flex items-center justify-between text-xs">
+        <span className="font-semibold text-emerald-300">📊 สรุปตามประเภทสินค้า</span>
+        <Badge variant="outline" className="text-[10px]">รวม {total} ตัว</Badge>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {Array.from(summary.entries())
+          .sort((a, b) => b[1] - a[1])
+          .map(([type, count]) => (
+            <Badge key={type} className="bg-card text-xs">
+              {type}: <strong className="ml-1 text-orange-400">{count}</strong>
+            </Badge>
+          ))}
+      </div>
+    </div>
+  );
+}
 
 export function RosterUpload({ jobId, onImported }: { jobId: string; onImported?: () => void }) {
   const [parsed, setParsed] = useState<ParseResult | null>(null);
@@ -39,8 +69,8 @@ export function RosterUpload({ jobId, onImported }: { jobId: string; onImported?
           setParsed({
             ok: true,
             rows,
-            detectedColumns: { name: 0, number: 1, size: 2, sponsor: 3, note: 4 },
-            headerRow: ["name", "number", "size", "sponsor", "note"],
+            detectedColumns: { name: 0, number: 1, size: 2, item_type: 3 },
+            headerRow: ["name", "number", "size", "item_type", "quantity"],
             totalRows: rows.length,
           });
           toast({ title: `AI อ่านได้ ${rows.length} แถว`, description: "ตรวจสอบก่อนนำเข้า" });
@@ -87,7 +117,7 @@ export function RosterUpload({ jobId, onImported }: { jobId: string; onImported?
     });
   }
 
-  function updateRow(idx: number, key: keyof ParsedRow, value: string) {
+  function updateRow<K extends keyof ParsedRow>(idx: number, key: K, value: ParsedRow[K]) {
     if (!parsed?.ok) return;
     const newRows = parsed.rows.map((r, i) => (i === idx ? { ...r, [key]: value } : r));
     setParsed({ ...parsed, rows: newRows });
@@ -103,7 +133,10 @@ export function RosterUpload({ jobId, onImported }: { jobId: string; onImported?
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="inline-flex items-center gap-2">
-          <FileSpreadsheet className="h-5 w-5 text-emerald-400" /> นำเข้ารายชื่อจาก Excel/CSV
+          <FileSpreadsheet className="h-5 w-5 text-emerald-400" /> นำเข้ารายชื่อจากไฟล์
+          <Badge variant="outline" className="ml-1 gap-1 text-[10px]">
+            <Sparkles className="h-2.5 w-2.5 text-orange-400" /> AI อ่าน PDF/รูปได้
+          </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -221,8 +254,16 @@ export function RosterUpload({ jobId, onImported }: { jobId: string; onImported?
               </Button>
             </div>
 
+            {/* AI Summary by item_type */}
+            <ItemTypeSummary rows={parsed.rows} />
+
             {/* Preview table */}
             <div className="max-h-[400px] overflow-auto rounded-md border border-border">
+              <datalist id="roster-item-type-presets">
+                {ITEM_TYPE_PRESETS.map((t) => (
+                  <option key={t} value={t} />
+                ))}
+              </datalist>
               <Table>
                 <TableHeader className="sticky top-0 bg-card">
                   <TableRow>
@@ -230,8 +271,8 @@ export function RosterUpload({ jobId, onImported }: { jobId: string; onImported?
                     <TableHead>ชื่อ</TableHead>
                     <TableHead className="w-16">เบอร์</TableHead>
                     <TableHead className="w-16">ไซส์</TableHead>
-                    <TableHead>Sponsor</TableHead>
-                    <TableHead>หมายเหตุ</TableHead>
+                    <TableHead className="w-16 text-center">จำนวน</TableHead>
+                    <TableHead className="w-44">ประเภท</TableHead>
                     <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -244,6 +285,7 @@ export function RosterUpload({ jobId, onImported }: { jobId: string; onImported?
                           value={r.name}
                           onChange={(e) => updateRow(idx, "name", e.target.value)}
                           className="w-full bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                          placeholder="(ไม่มี)"
                         />
                       </TableCell>
                       <TableCell>
@@ -256,22 +298,26 @@ export function RosterUpload({ jobId, onImported }: { jobId: string; onImported?
                       <TableCell>
                         <input
                           value={r.size}
-                          onChange={(e) => updateRow(idx, "size", e.target.value)}
+                          onChange={(e) => updateRow(idx, "size", e.target.value.toUpperCase())}
+                          className="w-full bg-transparent text-center font-mono text-sm uppercase focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <input
+                          type="number"
+                          min={1}
+                          value={r.quantity}
+                          onChange={(e) => updateRow(idx, "quantity", Math.max(1, parseInt(e.target.value) || 1))}
                           className="w-full bg-transparent text-center font-mono text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                         />
                       </TableCell>
                       <TableCell>
                         <input
-                          value={r.sponsor}
-                          onChange={(e) => updateRow(idx, "sponsor", e.target.value)}
+                          list="roster-item-type-presets"
+                          value={r.item_type}
+                          onChange={(e) => updateRow(idx, "item_type", e.target.value)}
                           className="w-full bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <input
-                          value={r.note}
-                          onChange={(e) => updateRow(idx, "note", e.target.value)}
-                          className="w-full bg-transparent text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                          placeholder="เลือก/พิมพ์..."
                         />
                       </TableCell>
                       <TableCell>

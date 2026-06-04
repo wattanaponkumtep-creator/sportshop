@@ -20,13 +20,44 @@ type GeminiResponse = {
 const SYSTEM_PROMPT = `คุณเป็นผู้ช่วยอ่านใบสั่งเสื้อกีฬาภาษาไทย ดึงข้อมูลรายชื่อนักกีฬา/สมาชิก ออกมาเป็นรายการ
 
 หลักการอ่าน:
-- แต่ละแถว = นักกีฬา/สมาชิก 1 คน
-- ฟิลด์ที่ต้องดึง:
-  • name: ชื่อ-นามสกุล (string)
+- ใบสั่งเสื้อมักมีตารางรายชื่อ + คอลัมน์ที่ระบุว่าแต่ละคนจะรับสินค้าอะไรบ้าง
+  เช่นมีช่องเครื่องหมาย ✓ หรือ ตัวเลข 1 ในคอลัมน์ "เสื้อ", "กางเกง", "ถุงเท้า" ฯลฯ
+- บางใบงานจะแบ่ง section ตามประเภท เช่น header "เป็นชุด" / "เฉพาะเสื้อ" / "ถุงเท้า"
+- แต่ละแถวในผลลัพธ์ = นักกีฬา 1 คน 1 ประเภทสินค้า
+
+ฟิลด์ที่ต้องดึง:
+  • name: ชื่อ-นามสกุล (string, "" ถ้าไม่ระบุ)
   • number: เบอร์เสื้อ (string, "" ถ้าไม่ระบุ)
-  • size: ไซส์ — แปลงเป็นตัวพิมพ์ใหญ่ เช่น "L", "XL", "2XL", "3XL" ("" ถ้าไม่ระบุ)
-  • sponsor: ชื่อ sponsor บนเสื้อ (string, "" ถ้าไม่ระบุ)
-  • note: หมายเหตุพิเศษ เช่น "แก้ขนาด", "เพิ่มชื่อพ่อ" (string, "" ถ้าไม่มี)
+  • size: ไซส์ — UPPERCASE เช่น "M", "L", "XL", "2XL", "3XL" ("" ถ้าไม่ระบุ)
+  • item_type: ประเภทสินค้า — ใช้ค่าเหล่านี้:
+      - "เสื้ออย่างเดียว" (ได้แค่เสื้อ ไม่ได้กางเกง/ถุงเท้า)
+      - "เสื้อ+กางเกง" (ได้ทั้งเสื้อและกางเกง แต่ไม่ได้ถุงเท้า)
+      - "เสื้อ+กางเกง+ถุงเท้า" (ได้ครบทุกอย่าง)
+      - "กางเกงอย่างเดียว" (ได้แค่กางเกง)
+      - "ถุงเท้า" (ได้แค่ถุงเท้า)
+      - "ปลอกแขน"
+      - หรือคำที่ปรากฏใน header ของใบงาน เช่น "เป็นชุด"
+  • quantity: จำนวน (number, ปกติ = 1 ต่อ 1 คน 1 ประเภท)
+      - กรณีของ bulk ไม่ระบุชื่อ (เช่น "ถุงเท้า ไซส์ M 5 คู่") → quantity = 5
+  • sponsor: ชื่อ sponsor (string, "" ถ้าไม่ระบุ)
+  • note: หมายเหตุ (string, "" ถ้าไม่มี)
+
+หลักการสำคัญ:
+1. ถ้าคนหนึ่งได้ทั้งเสื้อและกางเกง → 1 row, item_type = "เสื้อ+กางเกง", quantity = 1
+2. ถ้าคนหนึ่งได้แค่เสื้อ → 1 row, item_type = "เสื้ออย่างเดียว", quantity = 1
+3. ถ้าใบงานมีช่อง "จำนวนเสื้อ" และ "จำนวนกางเกง" ให้ตีความตามนี้:
+   - เสื้อ=1, กางเกง=0 → "เสื้ออย่างเดียว"
+   - เสื้อ=1, กางเกง=1 → "เสื้อ+กางเกง"
+   - เสื้อ=1, กางเกง=1, ถุงเท้า=1 → "เสื้อ+กางเกง+ถุงเท้า"
+   - เสื้อ=0, กางเกง=1 → "กางเกงอย่างเดียว"
+4. ข้ามแถวว่าง / header / sub-total / grand-total
+
+ตัวอย่าง output:
+[
+  {"name":"Mac_chiaTo","number":"8","size":"M","item_type":"เสื้ออย่างเดียว","quantity":1,"sponsor":"","note":""},
+  {"name":"CHAICHAN","number":"44","size":"M","item_type":"เสื้อ+กางเกง","quantity":1,"sponsor":"","note":""},
+  {"name":"","number":"","size":"M","item_type":"ถุงเท้า","quantity":5,"sponsor":"","note":""}
+]
 
 ตอบกลับ JSON array เท่านั้น — ห้ามมีข้อความอื่น
 ถ้าไม่พบรายชื่อเลย ตอบ []`;
@@ -65,23 +96,34 @@ function normalizeRows(data: unknown): ParsedRow[] {
     .map((row): ParsedRow | null => {
       if (typeof row !== "object" || row === null) return null;
       const r = row as Record<string, unknown>;
-      const get = (key: string): string => {
+      const getStr = (key: string): string => {
         const v = r[key];
         if (v == null) return "";
         if (typeof v === "string") return v.trim();
         if (typeof v === "number") return String(v);
         return "";
       };
+      const getNum = (key: string): number => {
+        const v = r[key];
+        if (typeof v === "number" && Number.isFinite(v) && v > 0) return Math.floor(v);
+        if (typeof v === "string") {
+          const n = parseInt(v.trim(), 10);
+          if (Number.isFinite(n) && n > 0) return n;
+        }
+        return 1;
+      };
       return {
-        name: get("name"),
-        number: get("number"),
-        size: get("size").toUpperCase(),
-        sponsor: get("sponsor"),
-        note: get("note"),
+        name: getStr("name"),
+        number: getStr("number"),
+        size: getStr("size").toUpperCase(),
+        item_type: getStr("item_type"),
+        quantity: getNum("quantity"),
+        sponsor: getStr("sponsor"),
+        note: getStr("note"),
       };
     })
     .filter((r): r is ParsedRow => r !== null)
-    .filter((r) => r.name || r.number || r.size || r.sponsor || r.note);
+    .filter((r) => r.name || r.number || r.size || r.item_type || r.sponsor || r.note);
 }
 
 export async function parseRosterWithAI(

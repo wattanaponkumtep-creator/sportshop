@@ -4,15 +4,20 @@ export type ParsedRow = {
   name: string;
   number: string;
   size: string;
+  item_type: string;
+  quantity: number;
   sponsor: string;
   note: string;
 };
 
+type DetectableField = Exclude<keyof ParsedRow, "quantity">;
+
 // Flexible header mapping — Thai + English variants
-const HEADER_PATTERNS: Record<keyof ParsedRow, RegExp[]> = {
+const HEADER_PATTERNS: Record<DetectableField, RegExp[]> = {
   name: [/^ชื่อ/i, /^name/i, /^player/i, /^นักกีฬา/i, /^นัก/i, /^member/i, /^สมาชิก/i],
   number: [/^เบอร์/i, /^หมายเลข/i, /^no\.?$/i, /^number/i, /^num/i, /^เลข/i, /^#/],
   size: [/^ไซส์/i, /^size/i, /^ขนาด/i, /^sz/i],
+  item_type: [/^ประเภท/i, /^สินค้า/i, /^item/i, /^type/i, /^product/i, /^kind/i],
   sponsor: [/^sponsor/i, /^สปอนเซอร์/i, /^สปอน/i, /^logo/i, /^โลโก้/i],
   note: [/^หมายเหตุ/i, /^remark/i, /^note/i, /^comment/i, /^อื่น/i],
 };
@@ -103,12 +108,17 @@ export function parseRosterFile(arrayBuffer: ArrayBuffer): ParseResult {
         name: detected.name !== undefined ? cellToString(row[detected.name]) : "",
         number: detected.number !== undefined ? cellToString(row[detected.number]) : "",
         size: detected.size !== undefined ? cellToString(row[detected.size]).toUpperCase() : "",
+        item_type: detected.item_type !== undefined ? cellToString(row[detected.item_type]) : "",
+        quantity: 1,
         sponsor: detected.sponsor !== undefined ? cellToString(row[detected.sponsor]) : "",
         note: detected.note !== undefined ? cellToString(row[detected.note]) : "",
       };
 
       // Skip rows that are entirely empty
-      if (!parsed.name && !parsed.number && !parsed.size && !parsed.sponsor && !parsed.note) {
+      if (
+        !parsed.name && !parsed.number && !parsed.size && !parsed.item_type
+        && !parsed.sponsor && !parsed.note
+      ) {
         continue;
       }
 
