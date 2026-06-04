@@ -67,8 +67,8 @@ begin
         'id', id,
         'kind', kind,
         'storage_path', storage_path,
-        'filename', filename,
-        'size_bytes', size_bytes,
+        'file_name', file_name,
+        'file_size', file_size,
         'mime_type', mime_type,
         'created_at', created_at
       ) order by created_at desc), '[]'::jsonb)

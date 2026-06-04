@@ -10,8 +10,8 @@ export type SignedFile = {
   id: string;
   kind: FileKind;
   storage_path: string;
-  filename: string | null;
-  size_bytes: number | null;
+  file_name: string | null;
+  file_size: number | null;
   mime_type: string | null;
   created_at: string;
   url: string;
@@ -36,7 +36,7 @@ function isImage(file: SignedFile): boolean {
 }
 
 function isPDF(file: SignedFile): boolean {
-  return file.mime_type === "application/pdf" || Boolean(file.filename?.toLowerCase().endsWith(".pdf"));
+  return file.mime_type === "application/pdf" || Boolean(file.file_name?.toLowerCase().endsWith(".pdf"));
 }
 
 export function FactoryPortalFiles({ files }: { files: SignedFile[] }) {
@@ -82,7 +82,7 @@ function FileCard({ file }: { file: SignedFile }) {
   const imageFile = isImage(file);
   const pdfFile = isPDF(file);
   const Icon = imageFile ? ImageIcon : pdfFile ? FileType : FileText;
-  const downloadName = file.filename ?? `${file.kind}-${file.id.slice(0, 6)}`;
+  const downloadName = file.file_name ?? `${file.kind}-${file.id.slice(0, 6)}`;
 
   return (
     <div className="rounded-lg border border-border bg-card/40 p-3">
@@ -114,8 +114,8 @@ function FileCard({ file }: { file: SignedFile }) {
           </div>
           <div className="truncate text-sm font-medium">{downloadName}</div>
           <div className="text-[11px] text-muted-foreground">
-            {formatSize(file.size_bytes)}
-            {file.size_bytes ? " • " : ""}
+            {formatSize(file.file_size)}
+            {file.file_size ? " • " : ""}
             อัพโหลด {formatDateTH(file.created_at, "d MMM yy")}
           </div>
         </div>

@@ -16,8 +16,8 @@ type PortalFile = {
   id: string;
   kind: FileKind;
   storage_path: string;
-  filename: string | null;
-  size_bytes: number | null;
+  file_name: string | null;
+  file_size: number | null;
   mime_type: string | null;
   created_at: string;
 };
