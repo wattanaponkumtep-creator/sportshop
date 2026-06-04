@@ -30,7 +30,7 @@ import { ProductionStages } from "@/components/jobs/production-stages";
 import { FactoryCheckins } from "@/components/jobs/factory-checkins";
 import { LineItemsEditor } from "@/components/jobs/line-items-editor";
 import { FactoryCommunication } from "@/components/jobs/factory-communication";
-import type { FactoryJob, FactoryMessage } from "@/lib/types/database";
+import type { FactoryJob, FactoryMessage, JobItem } from "@/lib/types/database";
 import { FileText } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -208,6 +208,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                   factoryName={factoriesById.get(fj.factory_id) ?? "โรงงาน"}
                   portalToken={fj.portal_token as string}
                   messages={messagesTyped.filter((m) => m.factory_job_id === fj.id)}
+                  items={(items ?? []) as JobItem[]}
                 />
               ));
           })()}

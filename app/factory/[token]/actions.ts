@@ -50,6 +50,36 @@ export async function postFactoryMessage(
 }
 
 /**
+ * Public action: factory toggles `produced` flag on a single item.
+ */
+export async function toggleItemProduced(token: string, itemId: string, produced: boolean) {
+  const supabase = createServiceClient();
+  const { error } = await supabase.rpc("factory_toggle_item_produced", {
+    p_token: token,
+    p_item_id: itemId,
+    p_produced: produced,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath(`/factory/${token}`);
+  return { ok: true as const };
+}
+
+/**
+ * Public action: factory marks all items of a given type as produced (bulk).
+ */
+export async function markGroupProduced(token: string, itemType: string, produced: boolean) {
+  const supabase = createServiceClient();
+  const { data, error } = await supabase.rpc("factory_mark_group_produced", {
+    p_token: token,
+    p_item_type: itemType,
+    p_produced: produced,
+  });
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath(`/factory/${token}`);
+  return { ok: true as const, count: (data as number) ?? 0 };
+}
+
+/**
  * Public action: factory updates a production stage % via portal token.
  */
 export async function updateFactoryStage(

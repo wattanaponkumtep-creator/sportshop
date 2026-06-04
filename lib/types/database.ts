@@ -158,6 +158,8 @@ export interface JobItem {
   note: string | null;
   item_type: string | null;
   quantity: number;
+  produced: boolean;
+  produced_at: string | null;
   position: number;
   created_at: string;
 }
@@ -391,6 +393,14 @@ export type Database = {
       factory_update_stage: {
         Args: { p_token: string; p_stage: string; p_value: number; p_author_name?: string | null };
         Returns: void;
+      };
+      factory_toggle_item_produced: {
+        Args: { p_token: string; p_item_id: string; p_produced: boolean };
+        Returns: void;
+      };
+      factory_mark_group_produced: {
+        Args: { p_token: string; p_item_type: string; p_produced: boolean };
+        Returns: number;
       };
     };
     Enums: {

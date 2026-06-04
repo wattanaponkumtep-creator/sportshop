@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Factory, Copy, Check, Send, Loader2, MessageCircle, ExternalLink, MessageSquare } from "lucide-react";
+import { Factory, Copy, Check, Send, Loader2, MessageCircle, ExternalLink, MessageSquare, ListChecks } from "lucide-react";
 import { cn, formatDateTH } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { PRODUCTION_STAGE_LABEL, FACTORY_MESSAGE_KIND_META } from "@/lib/constants";
 import { replyToFactory, markFactoryMessagesRead } from "@/app/(admin)/jobs/factory-message-actions";
-import type { FactoryMessage } from "@/lib/types/database";
+import type { FactoryMessage, JobItem } from "@/lib/types/database";
 
 type Props = {
   jobId: string;
@@ -19,9 +19,10 @@ type Props = {
   factoryName: string;
   portalToken: string;
   messages: FactoryMessage[];
+  items?: JobItem[];
 };
 
-export function FactoryCommunication({ jobId, jobCode, factoryJobId, factoryName, portalToken, messages }: Props) {
+export function FactoryCommunication({ jobId, jobCode, factoryJobId, factoryName, portalToken, messages, items = [] }: Props) {
   const [copied, setCopied] = useState(false);
   const [reply, setReply] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -30,6 +31,10 @@ export function FactoryCommunication({ jobId, jobCode, factoryJobId, factoryName
     typeof window !== "undefined" ? `${window.location.origin}/factory/${portalToken}` : `/factory/${portalToken}`;
 
   const unreadFromFactory = messages.filter((m) => m.author === "factory" && !m.read_by_admin).length;
+
+  const itemTotal = items.reduce((s, it) => s + (it.quantity ?? 1), 0);
+  const itemProduced = items.filter((it) => it.produced).reduce((s, it) => s + (it.quantity ?? 1), 0);
+  const itemPct = itemTotal > 0 ? Math.round((itemProduced / itemTotal) * 100) : 0;
 
   async function copyLink() {
     try {
@@ -89,6 +94,26 @@ export function FactoryCommunication({ jobId, jobCode, factoryJobId, factoryName
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Production checklist progress */}
+        {itemTotal > 0 && (
+          <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/5 p-3">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-cyan-300">
+                <ListChecks className="h-3.5 w-3.5" /> เช็คลิสต์การผลิต (โรงงานติ๊ก)
+              </span>
+              <Badge className={cn(itemPct === 100 ? "bg-emerald-500/30 text-emerald-200" : "bg-cyan-500/20 text-cyan-200")}>
+                {itemProduced} / {itemTotal} ตัว ({itemPct}%)
+              </Badge>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+              <div
+                className={cn("h-full transition-all", itemPct === 100 ? "bg-emerald-400" : "bg-cyan-400")}
+                style={{ width: `${itemPct}%` }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Portal link */}
         <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-3">
           <div className="mb-2 text-xs font-semibold text-orange-300">🔗 ลิงก์สำหรับโรงงาน (ส่งให้โรงงานเปิด)</div>

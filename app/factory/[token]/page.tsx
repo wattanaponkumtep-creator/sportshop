@@ -186,8 +186,8 @@ export default async function FactoryPortalPage({ params }: { params: Promise<{ 
         {/* Files (ใบงาน, artwork, references) */}
         <FactoryPortalFiles files={signedFiles} />
 
-        {/* Roster — full name/number/size list */}
-        <FactoryPortalRoster items={portal.items ?? []} />
+        {/* Roster — checklist for production tracking */}
+        <FactoryPortalRoster token={token} items={portal.items ?? []} />
 
         {/* INTERACTIVE: stages + messages */}
         <FactoryPortalClient
