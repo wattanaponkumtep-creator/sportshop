@@ -29,6 +29,8 @@ import { NotifyCustomerDialog } from "@/components/jobs/notify-customer-dialog";
 import { ProductionStages } from "@/components/jobs/production-stages";
 import { FactoryCheckins } from "@/components/jobs/factory-checkins";
 import { LineItemsEditor } from "@/components/jobs/line-items-editor";
+import { FactoryCommunication } from "@/components/jobs/factory-communication";
+import type { FactoryJob, FactoryMessage } from "@/lib/types/database";
 import { FileText } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +59,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     { data: customerChannels },
     { data: checkins },
     { data: lineItems },
+    { data: factoryMessages },
   ] = await Promise.all([
     supabase.from("job_items").select("*").eq("job_id", id).order("position"),
     supabase.from("job_files").select("*").eq("job_id", id).order("created_at", { ascending: false }),
@@ -69,6 +72,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     supabase.from("customer_channels").select("channel_type, external_id, display_name").eq("customer_id", (job as { customer_id: string }).customer_id),
     supabase.from("factory_checkins").select("*").eq("job_id", id).order("created_at", { ascending: false }),
     supabase.from("job_line_items").select("*").eq("job_id", id).order("position"),
+    supabase.from("factory_messages").select("*").eq("job_id", id).order("created_at", { ascending: true }),
   ]);
 
   const customer = job.customers as { id: string; name: string; phone: string | null } | null;
@@ -188,6 +192,25 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         </TabsContent>
 
         <TabsContent value="factory" className="mt-4 space-y-4">
+          {(() => {
+            const factoryJobsTyped = (factoryJobs ?? []) as FactoryJob[];
+            const messagesTyped = (factoryMessages ?? []) as FactoryMessage[];
+            const factoryByJobId = new Map(factoryJobsTyped.map((fj) => [fj.id, fj]));
+            const factoriesById = new Map((factories ?? []).map((f) => [f.id, f.name]));
+            return factoryJobsTyped
+              .filter((fj) => fj.portal_token)
+              .map((fj) => (
+                <FactoryCommunication
+                  key={fj.id}
+                  jobId={job.id}
+                  jobCode={job.job_code}
+                  factoryJobId={fj.id}
+                  factoryName={factoriesById.get(fj.factory_id) ?? "โรงงาน"}
+                  portalToken={fj.portal_token as string}
+                  messages={messagesTyped.filter((m) => m.factory_job_id === fj.id)}
+                />
+              ));
+          })()}
           <FactoryCheckins
             jobId={job.id}
             factories={factories ?? []}

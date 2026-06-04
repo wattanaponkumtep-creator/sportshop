@@ -102,3 +102,61 @@ export const MOCKUP_STATUS_COLOR: Record<MockupStatus, string> = {
   approved: "bg-emerald-500/20 text-emerald-200 border-emerald-500/40",
   rejected: "bg-red-500/20 text-red-200 border-red-500/40",
 };
+
+// ---------- Design Library ----------
+function indexBy<T, K extends keyof T, V extends keyof T>(
+  arr: readonly T[],
+  keyField: K,
+  valueField: V,
+): Record<string, T[V]> {
+  return Object.fromEntries(arr.map((x) => [x[keyField] as unknown as string, x[valueField]]));
+}
+
+export const SPORT_TYPES = [
+  { value: "football", label: "⚽ ฟุตบอล" },
+  { value: "basketball", label: "🏀 บาสเก็ตบอล" },
+  { value: "volleyball", label: "🏐 วอลเลย์บอล" },
+  { value: "badminton", label: "🏸 แบดมินตัน" },
+  { value: "rugby", label: "🏉 รักบี้" },
+  { value: "running", label: "🏃 วิ่ง / มาราธอน" },
+  { value: "takraw", label: "🥎 ตะกร้อ" },
+  { value: "esports", label: "🎮 E-Sports" },
+  { value: "polo", label: "👕 เสื้อโปโล" },
+  { value: "other", label: "✨ อื่นๆ" },
+] as const;
+
+export const SPORT_LABEL = indexBy(SPORT_TYPES, "value", "label");
+
+export const DESIGN_COLOR_OPTIONS = [
+  { value: "red", label: "แดง", hex: "#ef4444" },
+  { value: "orange", label: "ส้ม", hex: "#f97316" },
+  { value: "yellow", label: "เหลือง", hex: "#eab308" },
+  { value: "green", label: "เขียว", hex: "#22c55e" },
+  { value: "cyan", label: "ฟ้า", hex: "#06b6d4" },
+  { value: "blue", label: "น้ำเงิน", hex: "#3b82f6" },
+  { value: "purple", label: "ม่วง", hex: "#a855f7" },
+  { value: "pink", label: "ชมพู", hex: "#ec4899" },
+  { value: "black", label: "ดำ", hex: "#0f172a" },
+  { value: "white", label: "ขาว", hex: "#f8fafc" },
+  { value: "gray", label: "เทา", hex: "#64748b" },
+  { value: "brown", label: "น้ำตาล", hex: "#92400e" },
+] as const;
+
+export const DESIGN_COLOR_HEX = indexBy(DESIGN_COLOR_OPTIONS, "value", "hex");
+export const DESIGN_COLOR_LABEL = indexBy(DESIGN_COLOR_OPTIONS, "value", "label");
+
+// ---------- Factory Portal ----------
+export const PRODUCTION_STAGE_LABEL: Record<string, string> = {
+  layout: "เลย์เอ้าท์/ดีไซน์",
+  print: "พิมพ์ลาย",
+  sew: "ตัดเย็บ",
+  ship: "เตรียมส่ง",
+};
+
+export const FACTORY_MESSAGE_KIND_META: Record<string, { label: string; emoji: string; color: string }> = {
+  text: { label: "ข้อความ", emoji: "💬", color: "bg-slate-500/20 text-slate-200 border-slate-500/40" },
+  progress: { label: "อัพเดทขั้นตอน", emoji: "📊", color: "bg-cyan-500/20 text-cyan-200 border-cyan-500/40" },
+  issue: { label: "แจ้งปัญหา", emoji: "🚨", color: "bg-rose-500/20 text-rose-200 border-rose-500/40" },
+  complete: { label: "เสร็จแล้ว", emoji: "✅", color: "bg-emerald-500/20 text-emerald-200 border-emerald-500/40" },
+  question: { label: "คำถาม", emoji: "❓", color: "bg-amber-500/20 text-amber-200 border-amber-500/40" },
+};

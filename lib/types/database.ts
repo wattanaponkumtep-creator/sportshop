@@ -70,6 +70,45 @@ export interface CustomerChannel {
   created_at: string;
 }
 
+export type FactoryMessageAuthor = "admin" | "factory";
+export type FactoryMessageKind = "text" | "progress" | "issue" | "complete" | "question";
+export type FactoryProductionStage = "layout" | "print" | "sew" | "ship";
+
+export interface FactoryMessage {
+  id: string;
+  factory_job_id: string;
+  job_id: string;
+  author: FactoryMessageAuthor;
+  author_name: string | null;
+  kind: FactoryMessageKind;
+  message: string | null;
+  stage: FactoryProductionStage | null;
+  progress_value: number | null;
+  read_by_admin: boolean;
+  read_by_factory: boolean;
+  created_at: string;
+}
+
+export interface Design {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  sport_type: string | null;
+  colors: string[];
+  tags: string[];
+  thumbnail_path: string | null;
+  image_paths: string[];
+  suggested_price: number | null;
+  suggested_cost: number | null;
+  is_favorite: boolean;
+  use_count: number;
+  note: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Factory {
   id: string;
   name: string;
@@ -154,6 +193,7 @@ export interface FactoryJob {
   returned_at: string | null;
   cost: number | null;
   note: string | null;
+  portal_token: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -317,6 +357,8 @@ export type Database = {
       factory_checkins: TableDef<FactoryCheckin>;
       shop_info: TableDef<ShopInfo>;
       job_line_items: TableDef<JobLineItem>;
+      factory_messages: TableDef<FactoryMessage>;
+      designs: TableDef<Design>;
       customer_comments: TableDef<{ id: string; job_id: string; author_name: string | null; message: string; created_at: string }>;
     };
     Views: { [_ in never]: never };
@@ -332,6 +374,22 @@ export type Database = {
       post_customer_comment: {
         Args: { p_token: string; p_message: string; p_name?: string };
         Returns: unknown;
+      };
+      get_factory_portal: { Args: { p_token: string }; Returns: unknown };
+      factory_post_message: {
+        Args: {
+          p_token: string;
+          p_kind: string;
+          p_message: string;
+          p_stage?: string | null;
+          p_progress_value?: number | null;
+          p_author_name?: string | null;
+        };
+        Returns: string;
+      };
+      factory_update_stage: {
+        Args: { p_token: string; p_stage: string; p_value: number; p_author_name?: string | null };
+        Returns: void;
       };
     };
     Enums: {
