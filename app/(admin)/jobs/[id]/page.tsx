@@ -60,6 +60,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     { data: checkins },
     { data: lineItems },
     { data: factoryMessages },
+    { data: shopInfoRows },
   ] = await Promise.all([
     supabase.from("job_items").select("*").eq("job_id", id).order("position"),
     supabase.from("job_files").select("*").eq("job_id", id).order("created_at", { ascending: false }),
@@ -73,7 +74,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     supabase.from("factory_checkins").select("*").eq("job_id", id).order("created_at", { ascending: false }),
     supabase.from("job_line_items").select("*").eq("job_id", id).order("position"),
     supabase.from("factory_messages").select("*").eq("job_id", id).order("created_at", { ascending: true }),
+    supabase.from("shop_info").select("shop_name, phone, bank_info").eq("id", 1).limit(1),
   ]);
+
+  const shopInfo = (shopInfoRows && shopInfoRows[0]) as { shop_name: string | null; phone: string | null; bank_info: string | null } | undefined;
 
   const customer = job.customers as { id: string; name: string; phone: string | null } | null;
   const factory = job.factories as { id: string; name: string } | null;
@@ -188,7 +192,18 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             otherCost={Number(job.other_cost ?? 0)}
             factories={factories ?? []}
           />
-          <JobPayments jobId={job.id} salePrice={Number(job.sale_price)} payments={payments ?? []} />
+          <JobPayments
+            jobId={job.id}
+            jobCode={job.job_code}
+            jobLabel={job.job_label}
+            trackToken={job.track_token}
+            customerName={customer?.name ?? ""}
+            customerPhone={customer?.phone ?? null}
+            customerChannels={customerChannels ?? []}
+            shopInfo={shopInfo ?? null}
+            salePrice={Number(job.sale_price)}
+            payments={payments ?? []}
+          />
         </TabsContent>
 
         <TabsContent value="factory" className="mt-4 space-y-4">

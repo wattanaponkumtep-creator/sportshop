@@ -14,17 +14,44 @@ import { formatBaht, formatDateTH, cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { addPayment, deletePayment, createSignedSlipUrl } from "@/app/(admin)/jobs/payment-actions";
 import { createClient } from "@/lib/supabase/client";
+import { PaymentRequestDialog } from "./payment-request-dialog";
 import type { Payment, PaymentType } from "@/lib/types/database";
+
+type PaymentChannel = {
+  channel_type: string;
+  external_id: string | null;
+  display_name: string | null;
+};
+
+type PaymentShopInfo = {
+  shop_name: string | null;
+  phone: string | null;
+  bank_info: string | null;
+};
 
 const TYPES: PaymentType[] = ["deposit", "full", "refund"];
 const MAX_SLIP_SIZE = 10 * 1024 * 1024;
 
 export function JobPayments({
   jobId,
+  jobCode,
+  jobLabel,
+  trackToken,
+  customerName,
+  customerPhone,
+  customerChannels,
+  shopInfo,
   salePrice,
   payments,
 }: {
   jobId: string;
+  jobCode: string;
+  jobLabel: string | null;
+  trackToken: string;
+  customerName: string;
+  customerPhone: string | null;
+  customerChannels: PaymentChannel[];
+  shopInfo: PaymentShopInfo | null;
   salePrice: number;
   payments: Payment[];
 }) {
@@ -58,10 +85,23 @@ export function JobPayments({
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
           <CardTitle className="inline-flex items-center gap-2">
             <Wallet className="h-5 w-5 text-emerald-400" /> สรุปการเงิน
           </CardTitle>
+          {outstanding > 0 && (
+            <PaymentRequestDialog
+              jobCode={jobCode}
+              jobLabel={jobLabel}
+              trackToken={trackToken}
+              customerName={customerName}
+              phone={customerPhone}
+              channels={customerChannels}
+              salePrice={Number(salePrice)}
+              totalPaid={paid}
+              shopInfo={shopInfo}
+            />
+          )}
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-3">
