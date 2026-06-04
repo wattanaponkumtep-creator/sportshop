@@ -9,6 +9,7 @@ import { isLineConfigured } from "@/lib/line/client";
 import { LinkLineUserButton } from "@/components/settings/link-line-user";
 import { NotificationsSection } from "@/components/settings/notifications-section";
 import { CopyLineUserId } from "@/components/settings/copy-line-user-id";
+import { ShopInfoForm } from "@/components/settings/shop-info-form";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export default async function SettingsPage() {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [{ data: events }, { data: customers }, { data: meProfile }] = await Promise.all([
+  const [{ data: events }, { data: customers }, { data: meProfile }, { data: shopInfoRows }] = await Promise.all([
     supabase
       .from("line_webhook_events")
       .select("*")
@@ -30,17 +31,28 @@ export default async function SettingsPage() {
       .select("calendar_token, line_user_id_personal")
       .eq("id", user?.id ?? "")
       .maybeSingle(),
+    supabase.from("shop_info").select("shop_name, address, phone, email, tax_id, bank_info").eq("id", 1).limit(1),
   ]);
 
   const me = meProfile as { calendar_token: string; line_user_id_personal: string | null } | null;
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "");
+  const shopInfo = (shopInfoRows && shopInfoRows[0]) as {
+    shop_name: string | null;
+    address: string | null;
+    phone: string | null;
+    email: string | null;
+    tax_id: string | null;
+    bank_info: string | null;
+  } | undefined;
 
   return (
     <div className="container space-y-4 p-3 sm:space-y-6 sm:p-4 md:p-8">
       <header>
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">ตั้งค่าระบบ</h1>
-        <p className="text-sm text-muted-foreground">LINE OA · Calendar · Daily digest · Webhook events</p>
+        <p className="text-sm text-muted-foreground">ข้อมูลร้าน · LINE OA · Calendar · Daily digest · Webhook events</p>
       </header>
+
+      <ShopInfoForm initial={shopInfo ?? null} />
 
       {me && (
         <NotificationsSection

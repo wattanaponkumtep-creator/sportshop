@@ -51,3 +51,40 @@ export async function linkLineUserToCustomer(input: z.input<typeof linkSchema>) 
   revalidatePath(`/customers/${parsed.data.customer_id}`);
   return { ok: true as const };
 }
+
+const shopInfoSchema = z.object({
+  shop_name: z.string().trim().min(1, "กรุณาใส่ชื่อร้าน"),
+  address: z.string().trim().optional().nullable(),
+  phone: z.string().trim().optional().nullable(),
+  email: z.string().trim().optional().nullable(),
+  tax_id: z.string().trim().optional().nullable(),
+  bank_info: z.string().trim().optional().nullable(),
+});
+
+export type ShopInfoInput = z.input<typeof shopInfoSchema>;
+
+export async function updateShopInfo(input: ShopInfoInput) {
+  const parsed = shopInfoSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" };
+  }
+
+  const supabase = await createClient();
+
+  // Upsert row id=1 (single-row table)
+  const { error } = await supabase.from("shop_info").upsert({
+    id: 1,
+    shop_name: parsed.data.shop_name,
+    address: parsed.data.address || null,
+    phone: parsed.data.phone || null,
+    email: parsed.data.email || null,
+    tax_id: parsed.data.tax_id || null,
+    bank_info: parsed.data.bank_info || null,
+    updated_at: new Date().toISOString(),
+  });
+
+  if (error) return { ok: false as const, error: error.message };
+
+  revalidatePath("/settings");
+  return { ok: true as const };
+}
