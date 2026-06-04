@@ -8,6 +8,7 @@ import { JOB_STATUS_LABEL, JOB_STATUS_COLOR, PRIORITY_LABEL, PRIORITY_COLOR, FAC
 import { FactoryPortalClient } from "./portal-client";
 import { FactoryPortalFiles, type SignedFile } from "./portal-files";
 import { FactoryPortalRoster, type RosterItem } from "./portal-roster";
+import { FactoryPortalMockups, type SignedMockup } from "./portal-mockups";
 import type { JobStatus, PriorityLevel, FactoryJobStatus, FactoryMessage, FileKind } from "@/lib/types/database";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,16 @@ type PortalFile = {
   file_size: number | null;
   mime_type: string | null;
   created_at: string;
+};
+
+type PortalMockup = {
+  id: string;
+  version: number;
+  title: string | null;
+  description: string | null;
+  storage_paths: string[];
+  decided_at: string | null;
+  decision_note: string | null;
 };
 
 type PortalPayload = {
@@ -47,6 +58,7 @@ type PortalPayload = {
   items_by_type: { item_type: string; count: number }[];
   items: RosterItem[];
   files: PortalFile[];
+  mockups: PortalMockup[];
   messages: FactoryMessage[];
 };
 
@@ -59,19 +71,34 @@ export default async function FactoryPortalPage({ params }: { params: Promise<{ 
 
   const portal = data as unknown as PortalPayload;
 
-  // Server-side: sign all file URLs in one batch (1 round-trip)
-  let signedFiles: SignedFile[] = [];
-  if (portal.files && portal.files.length > 0) {
-    const paths = portal.files.map((f) => f.storage_path);
-    const { data: signed } = await supabase.storage.from("job-files").createSignedUrls(paths, 3600);
-    const urlMap = new Map<string, string>();
+  // Server-side: sign all file + mockup URLs in ONE batch (1 round-trip)
+  const filePaths = (portal.files ?? []).map((f) => f.storage_path);
+  const mockupPaths = (portal.mockups ?? []).flatMap((m) => m.storage_paths ?? []);
+  const allPaths = [...new Set([...filePaths, ...mockupPaths])];
+
+  const urlMap = new Map<string, string>();
+  if (allPaths.length > 0) {
+    const { data: signed } = await supabase.storage.from("job-files").createSignedUrls(allPaths, 3600);
     for (const s of signed ?? []) {
       if (s.path && s.signedUrl) urlMap.set(s.path, s.signedUrl);
     }
-    signedFiles = portal.files
-      .map((f) => ({ ...f, url: urlMap.get(f.storage_path) ?? null }))
-      .filter((f): f is SignedFile => f.url !== null);
   }
+
+  const signedFiles: SignedFile[] = (portal.files ?? [])
+    .map((f) => ({ ...f, url: urlMap.get(f.storage_path) ?? null }))
+    .filter((f): f is SignedFile => f.url !== null);
+
+  const signedMockups: SignedMockup[] = (portal.mockups ?? []).map((m) => ({
+    id: m.id,
+    version: m.version,
+    title: m.title,
+    description: m.description,
+    decided_at: m.decided_at,
+    decision_note: m.decision_note,
+    images: (m.storage_paths ?? [])
+      .map((p) => ({ path: p, url: urlMap.get(p) ?? "" }))
+      .filter((img) => img.url !== ""),
+  }));
 
   return (
     <div className="min-h-screen bg-background">
@@ -182,6 +209,9 @@ export default async function FactoryPortalPage({ params }: { params: Promise<{ 
             )}
           </CardContent>
         </Card>
+
+        {/* Mockups — approved designs for production reference */}
+        <FactoryPortalMockups mockups={signedMockups} />
 
         {/* Files (ใบงาน, artwork, references) */}
         <FactoryPortalFiles files={signedFiles} />
