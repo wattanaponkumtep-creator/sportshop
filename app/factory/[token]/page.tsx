@@ -29,8 +29,10 @@ type PortalMockup = {
   title: string | null;
   description: string | null;
   storage_paths: string[];
+  status: "draft" | "awaiting_approval" | "approved";
   decided_at: string | null;
   decision_note: string | null;
+  created_at: string;
 };
 
 type PortalPayload = {
@@ -93,8 +95,10 @@ export default async function FactoryPortalPage({ params }: { params: Promise<{ 
     version: m.version,
     title: m.title,
     description: m.description,
+    status: m.status,
     decided_at: m.decided_at,
     decision_note: m.decision_note,
+    created_at: m.created_at,
     images: (m.storage_paths ?? [])
       .map((p) => ({ path: p, url: urlMap.get(p) ?? "" }))
       .filter((img) => img.url !== ""),

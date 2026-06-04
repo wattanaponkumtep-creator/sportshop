@@ -11,9 +11,29 @@ export type SignedMockup = {
   version: number;
   title: string | null;
   description: string | null;
+  status: "draft" | "awaiting_approval" | "approved";
   decided_at: string | null;
   decision_note: string | null;
+  created_at: string;
   images: { path: string; url: string }[];
+};
+
+const STATUS_META: Record<SignedMockup["status"], { label: string; emoji: string; className: string }> = {
+  draft: {
+    label: "ฉบับร่าง",
+    emoji: "📝",
+    className: "bg-slate-500/30 text-slate-200",
+  },
+  awaiting_approval: {
+    label: "รออนุมัติจากลูกค้า",
+    emoji: "⏳",
+    className: "bg-amber-500/30 text-amber-200",
+  },
+  approved: {
+    label: "อนุมัติแล้ว",
+    emoji: "✓",
+    className: "bg-emerald-500/30 text-emerald-200",
+  },
 };
 
 export function FactoryPortalMockups({ mockups }: { mockups: SignedMockup[] }) {
@@ -29,25 +49,41 @@ export function FactoryPortalMockups({ mockups }: { mockups: SignedMockup[] }) {
         </CardHeader>
         <CardContent>
           <div className="rounded-md border border-dashed border-border bg-muted/20 p-6 text-center text-sm text-muted-foreground">
-            ยังไม่มีแบบเสื้อที่อนุมัติ — รอลูกค้าอนุมัติแบบก่อน
+            ยังไม่มีแบบเสื้อ — รอร้านอัพโหลด
           </div>
         </CardContent>
       </Card>
     );
   }
 
+  const hasApproved = mockups.some((m) => m.status === "approved");
+  const allApproved = mockups.every((m) => m.status === "approved");
+
   return (
     <>
       <Card className="border-purple-500/30 bg-purple-500/5">
         <CardHeader className="pb-3">
           <CardTitle className="inline-flex flex-wrap items-center gap-2 text-base">
-            <Palette className="h-4 w-4 text-purple-400" /> 🎨 แบบเสื้อ (Mockup) — อนุมัติแล้ว
-            <Badge className="bg-emerald-500/30 text-emerald-200">✓ พร้อมผลิต</Badge>
+            <Palette className="h-4 w-4 text-purple-400" /> 🎨 แบบเสื้อ (Mockup)
+            <Badge variant="outline" className="text-xs">{mockups.length} แบบ</Badge>
+            {allApproved && <Badge className="bg-emerald-500/30 text-emerald-200">✓ ทุกแบบอนุมัติแล้ว</Badge>}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="rounded-md border border-purple-500/30 bg-purple-500/10 p-2.5 text-xs text-purple-200">
-            💡 <strong>สำคัญ:</strong> นี่คือแบบที่ลูกค้าอนุมัติแล้ว — ผลิตให้ตรงตามนี้ทุกประการ
+          <div className={`rounded-md border p-2.5 text-xs ${
+            allApproved
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+              : hasApproved
+              ? "border-purple-500/30 bg-purple-500/10 text-purple-200"
+              : "border-amber-500/30 bg-amber-500/10 text-amber-200"
+          }`}>
+            {allApproved ? (
+              <>💡 <strong>พร้อมผลิตเต็มที่:</strong> ทุกแบบลูกค้าอนุมัติแล้ว ผลิตได้ตามนี้เลย</>
+            ) : hasApproved ? (
+              <>💡 <strong>หมายเหตุ:</strong> มีแบบบางส่วนอนุมัติแล้ว — แบบที่ยัง "รออนุมัติ" อาจมีการแก้ไข กรุณาเช็คก่อนเริ่มผลิต</>
+            ) : (
+              <>💡 <strong>แบบเบื้องต้น:</strong> ยังไม่ได้รับการอนุมัติจากลูกค้า — ใช้เป็นข้อมูลประกอบ อย่าเพิ่งผลิตจริงจนกว่าจะได้รับการยืนยัน</>
+            )}
           </div>
           {mockups.map((m) => (
             <MockupCard
@@ -86,13 +122,16 @@ function MockupCard({
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className="font-mono text-xs">v{mockup.version}</Badge>
+          <Badge className={`text-xs ${STATUS_META[mockup.status].className}`}>
+            {STATUS_META[mockup.status].emoji} {STATUS_META[mockup.status].label}
+          </Badge>
           {mockup.title && <span className="font-semibold">{mockup.title}</span>}
         </div>
-        {mockup.decided_at && (
-          <span className="text-[11px] text-muted-foreground">
-            อนุมัติ {formatDateTH(mockup.decided_at, "d MMM yy")}
-          </span>
-        )}
+        <span className="text-[11px] text-muted-foreground">
+          {mockup.decided_at
+            ? <>อนุมัติ {formatDateTH(mockup.decided_at, "d MMM yy")}</>
+            : <>ส่ง {formatDateTH(mockup.created_at, "d MMM yy")}</>}
+        </span>
       </div>
 
       {/* Description / approval note */}
