@@ -6,9 +6,21 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { formatDateTH } from "@/lib/utils";
 import { JOB_STATUS_LABEL, JOB_STATUS_COLOR, PRIORITY_LABEL, PRIORITY_COLOR, FACTORY_STATUS_LABEL } from "@/lib/constants";
 import { FactoryPortalClient } from "./portal-client";
-import type { JobStatus, PriorityLevel, FactoryJobStatus, FactoryMessage } from "@/lib/types/database";
+import { FactoryPortalFiles, type SignedFile } from "./portal-files";
+import { FactoryPortalRoster, type RosterItem } from "./portal-roster";
+import type { JobStatus, PriorityLevel, FactoryJobStatus, FactoryMessage, FileKind } from "@/lib/types/database";
 
 export const dynamic = "force-dynamic";
+
+type PortalFile = {
+  id: string;
+  kind: FileKind;
+  storage_path: string;
+  filename: string | null;
+  size_bytes: number | null;
+  mime_type: string | null;
+  created_at: string;
+};
 
 type PortalPayload = {
   factory_job_id: string;
@@ -24,8 +36,8 @@ type PortalPayload = {
   factory_name: string;
   factory_cost: number | null;
   factory_note: string | null;
-  sent_at: string;
-  completed_at: string | null;
+  sent_at: string | null;
+  returned_at: string | null;
   layout_progress: number;
   print_progress: number;
   sew_progress: number;
@@ -33,6 +45,8 @@ type PortalPayload = {
   items_total: number;
   items_by_size: { size: string; count: number }[];
   items_by_type: { item_type: string; count: number }[];
+  items: RosterItem[];
+  files: PortalFile[];
   messages: FactoryMessage[];
 };
 
@@ -44,6 +58,20 @@ export default async function FactoryPortalPage({ params }: { params: Promise<{ 
   if (error || !data) notFound();
 
   const portal = data as unknown as PortalPayload;
+
+  // Server-side: sign all file URLs in one batch (1 round-trip)
+  let signedFiles: SignedFile[] = [];
+  if (portal.files && portal.files.length > 0) {
+    const paths = portal.files.map((f) => f.storage_path);
+    const { data: signed } = await supabase.storage.from("job-files").createSignedUrls(paths, 3600);
+    const urlMap = new Map<string, string>();
+    for (const s of signed ?? []) {
+      if (s.path && s.signedUrl) urlMap.set(s.path, s.signedUrl);
+    }
+    signedFiles = portal.files
+      .map((f) => ({ ...f, url: urlMap.get(f.storage_path) ?? null }))
+      .filter((f): f is SignedFile => f.url !== null);
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -105,10 +133,12 @@ export default async function FactoryPortalPage({ params }: { params: Promise<{ 
                   <div className="font-medium text-rose-400">{formatDateTH(portal.due_date, "d MMM yy")}</div>
                 </div>
               )}
-              <div>
-                <div className="text-xs text-muted-foreground">รับงานเมื่อ</div>
-                <div className="font-medium">{formatDateTH(portal.sent_at, "d MMM yy")}</div>
-              </div>
+              {portal.sent_at && (
+                <div>
+                  <div className="text-xs text-muted-foreground">รับงานเมื่อ</div>
+                  <div className="font-medium">{formatDateTH(portal.sent_at, "d MMM yy")}</div>
+                </div>
+              )}
             </div>
 
             {portal.note && (
@@ -152,6 +182,12 @@ export default async function FactoryPortalPage({ params }: { params: Promise<{ 
             )}
           </CardContent>
         </Card>
+
+        {/* Files (ใบงาน, artwork, references) */}
+        <FactoryPortalFiles files={signedFiles} />
+
+        {/* Roster — full name/number/size list */}
+        <FactoryPortalRoster items={portal.items ?? []} />
 
         {/* INTERACTIVE: stages + messages */}
         <FactoryPortalClient

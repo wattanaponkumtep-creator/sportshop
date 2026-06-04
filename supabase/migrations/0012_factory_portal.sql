@@ -79,7 +79,7 @@ begin
     'factory_cost', fj.cost,
     'factory_note', fj.note,
     'sent_at', fj.sent_at,
-    'completed_at', fj.completed_at,
+    'returned_at', fj.returned_at,
     'layout_progress', j.layout_progress,
     'print_progress', j.print_progress,
     'sew_progress', j.sew_progress,
