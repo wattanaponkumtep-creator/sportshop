@@ -10,14 +10,17 @@ export function SizeSummary({ items }: { items: JobItem[] }) {
   const summary = useMemo(() => {
     const bySize = new Map<string, { count: number; people: string[] }>();
     let noSizeCount = 0;
+    let total = 0;
     for (const it of items) {
+      const qty = it.quantity ?? 1;
+      total += qty;
       const size = (it.size || "").trim();
       if (!size) {
-        noSizeCount++;
+        noSizeCount += qty;
         continue;
       }
       const cur = bySize.get(size) ?? { count: 0, people: [] };
-      cur.count++;
+      cur.count += qty;
       if (it.name) cur.people.push(it.name);
       bySize.set(size, cur);
     }
@@ -32,7 +35,6 @@ export function SizeSummary({ items }: { items: JobItem[] }) {
         if (bi !== -1) return 1;
         return a.size.localeCompare(b.size);
       });
-    const total = items.length;
     return { sorted, total, noSizeCount };
   }, [items]);
 

@@ -145,6 +145,17 @@ export const DESIGN_COLOR_OPTIONS = [
 export const DESIGN_COLOR_HEX = indexBy(DESIGN_COLOR_OPTIONS, "value", "hex");
 export const DESIGN_COLOR_LABEL = indexBy(DESIGN_COLOR_OPTIONS, "value", "label");
 
+// ---------- Item Type Presets (for roster editor) ----------
+export const ITEM_TYPE_PRESETS = [
+  "เสื้ออย่างเดียว",
+  "เสื้อ+กางเกง",
+  "เสื้อ+กางเกง+ถุงเท้า",
+  "กางเกงอย่างเดียว",
+  "ถุงเท้า",
+  "ปลอกแขน",
+  "อื่นๆ",
+] as const;
+
 // ---------- Factory Portal ----------
 export const PRODUCTION_STAGE_LABEL: Record<string, string> = {
   layout: "เลย์เอ้าท์/ดีไซน์",

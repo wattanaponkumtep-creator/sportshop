@@ -42,22 +42,25 @@ export function ReceivingCheck({ jobId, items, receivedCounts, receivedCheckAt, 
     const grouped = new Map<string, Map<string, number>>(); // type → size → count
     const allSizes = new Set<string>();
     const allTypes = new Set<string>();
+    let total = 0;
 
     for (const it of items) {
+      const qty = it.quantity ?? 1;
+      total += qty;
       const type = (it.item_type ?? "").trim() || "ไม่ระบุประเภท";
       const size = (it.size ?? "").trim().toUpperCase() || "ไม่ระบุ";
       allTypes.add(type);
       allSizes.add(size);
       if (!grouped.has(type)) grouped.set(type, new Map());
       const m = grouped.get(type)!;
-      m.set(size, (m.get(size) ?? 0) + 1);
+      m.set(size, (m.get(size) ?? 0) + qty);
     }
 
     return {
       types: Array.from(allTypes),
       sizes: sortSizes(Array.from(allSizes)),
       get: (t: string, s: string) => grouped.get(t)?.get(s) ?? 0,
-      total: items.length,
+      total,
     };
   }, [items]);
 

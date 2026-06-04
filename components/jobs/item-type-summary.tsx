@@ -22,14 +22,17 @@ export function ItemTypeSummary({ items }: { items: JobItem[] }) {
   const summary = useMemo(() => {
     const grouped = new Map<string, Map<string, number>>(); // type → size → count
     const allSizes = new Set<string>();
+    let grandTotal = 0;
 
     for (const it of items) {
+      const qty = it.quantity ?? 1;
+      grandTotal += qty;
       const type = (it.item_type ?? "").trim() || "ไม่ระบุประเภท";
       const size = (it.size ?? "").trim().toUpperCase() || "ไม่ระบุ";
 
       if (!grouped.has(type)) grouped.set(type, new Map());
       const sizes = grouped.get(type)!;
-      sizes.set(size, (sizes.get(size) ?? 0) + 1);
+      sizes.set(size, (sizes.get(size) ?? 0) + qty);
       allSizes.add(size);
     }
 
@@ -40,7 +43,7 @@ export function ItemTypeSummary({ items }: { items: JobItem[] }) {
         total: Array.from(sizes.values()).reduce((a, b) => a + b, 0),
       })),
       allSizes: sortSizes(Array.from(allSizes)),
-      grandTotal: items.length,
+      grandTotal,
     };
   }, [items]);
 

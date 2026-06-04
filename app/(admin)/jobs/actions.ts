@@ -130,6 +130,8 @@ const itemSchema = z.object({
   size: z.string().trim().optional().nullable(),
   sponsor: z.string().trim().optional().nullable(),
   note: z.string().trim().optional().nullable(),
+  item_type: z.string().trim().optional().nullable(),
+  quantity: z.coerce.number().int().min(1).default(1),
 });
 
 export async function saveJobItems(jobId: string, items: z.input<typeof itemSchema>[]) {
@@ -147,6 +149,8 @@ export async function saveJobItems(jobId: string, items: z.input<typeof itemSche
         size: it.size || null,
         sponsor: it.sponsor || null,
         note: it.note || null,
+        item_type: it.item_type || null,
+        quantity: it.quantity,
         position: idx,
       }))
     );

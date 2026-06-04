@@ -12,6 +12,7 @@ export type RosterItem = {
   size: string | null;
   sponsor: string | null;
   item_type: string | null;
+  quantity: number | null;
   note: string | null;
 };
 
@@ -68,7 +69,8 @@ export function FactoryPortalRoster({ items }: { items: RosterItem[] }) {
         const sizeCounts = new Map<string, number>();
         for (const it of list) {
           const s = (it.size ?? "").trim().toUpperCase() || "ไม่ระบุ";
-          sizeCounts.set(s, (sizeCounts.get(s) ?? 0) + 1);
+          const qty = it.quantity ?? 1;
+          sizeCounts.set(s, (sizeCounts.get(s) ?? 0) + qty);
         }
         return {
           type,
@@ -89,7 +91,9 @@ export function FactoryPortalRoster({ items }: { items: RosterItem[] }) {
       <CardHeader className="pb-3">
         <CardTitle className="inline-flex items-center gap-2 text-base">
           <Users className="h-4 w-4 text-cyan-400" /> รายชื่อ / เบอร์ / ไซส์ — แยกตามสินค้า
-          <Badge variant="outline" className="ml-1 text-xs">{items.length} ตัว / {groups.length} ประเภท</Badge>
+          <Badge variant="outline" className="ml-1 text-xs">
+            {items.reduce((s, it) => s + (it.quantity ?? 1), 0)} ตัว / {groups.length} ประเภท
+          </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -119,7 +123,12 @@ function RosterGroupCard({ group }: { group: Group }) {
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-lg">{emoji}</span>
           <span className={cn("font-semibold", color)}>{group.type}</span>
-          <Badge className="bg-orange-500/20 text-orange-300">{group.items.length} คน</Badge>
+          <Badge className="bg-orange-500/20 text-orange-300">
+            {group.items.reduce((s, it) => s + (it.quantity ?? 1), 0)} ตัว
+            {group.items.length !== group.items.reduce((s, it) => s + (it.quantity ?? 1), 0)
+              ? ` / ${group.items.length} แถว`
+              : ""}
+          </Badge>
         </div>
         {expanded ? (
           <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -151,26 +160,33 @@ function RosterGroupCard({ group }: { group: Group }) {
                 <th className="px-2 py-1.5 text-left text-[10px] font-semibold uppercase text-muted-foreground">ชื่อ</th>
                 <th className="px-2 py-1.5 text-center text-[10px] font-semibold uppercase text-muted-foreground">เบอร์</th>
                 <th className="px-2 py-1.5 text-center text-[10px] font-semibold uppercase text-muted-foreground">ไซส์</th>
+                <th className="px-2 py-1.5 text-center text-[10px] font-semibold uppercase text-muted-foreground">จำนวน</th>
                 <th className="px-2 py-1.5 text-left text-[10px] font-semibold uppercase text-muted-foreground">หมายเหตุ</th>
               </tr>
             </thead>
             <tbody>
-              {group.items.map((it, idx) => (
-                <tr key={idx} className="border-t border-border/40">
-                  <td className="px-2 py-1.5 text-xs text-muted-foreground">{idx + 1}</td>
-                  <td className="px-2 py-1.5">{it.name || <span className="text-muted-foreground">—</span>}</td>
-                  <td className="px-2 py-1.5 text-center font-mono">
-                    {it.number || <span className="text-muted-foreground">—</span>}
-                  </td>
-                  <td className="px-2 py-1.5 text-center font-mono font-semibold text-cyan-400">
-                    {it.size || "—"}
-                  </td>
-                  <td className="px-2 py-1.5 text-xs text-muted-foreground">
-                    {it.sponsor ? <span className="mr-1">[{it.sponsor}]</span> : ""}
-                    {it.note || ""}
-                  </td>
-                </tr>
-              ))}
+              {group.items.map((it, idx) => {
+                const qty = it.quantity ?? 1;
+                return (
+                  <tr key={idx} className="border-t border-border/40">
+                    <td className="px-2 py-1.5 text-xs text-muted-foreground">{idx + 1}</td>
+                    <td className="px-2 py-1.5">{it.name || <span className="text-muted-foreground">—</span>}</td>
+                    <td className="px-2 py-1.5 text-center font-mono">
+                      {it.number || <span className="text-muted-foreground">—</span>}
+                    </td>
+                    <td className="px-2 py-1.5 text-center font-mono font-semibold text-cyan-400">
+                      {it.size || "—"}
+                    </td>
+                    <td className="px-2 py-1.5 text-center font-mono">
+                      {qty > 1 ? <span className="font-bold text-orange-400">×{qty}</span> : qty}
+                    </td>
+                    <td className="px-2 py-1.5 text-xs text-muted-foreground">
+                      {it.sponsor ? <span className="mr-1">[{it.sponsor}]</span> : ""}
+                      {it.note || ""}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -157,6 +157,7 @@ export interface JobItem {
   sponsor: string | null;
   note: string | null;
   item_type: string | null;
+  quantity: number;
   position: number;
   created_at: string;
 }
