@@ -24,19 +24,18 @@ export function PortfolioGallery({ designs }: { designs: GalleryDesign[] }) {
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   const [imageIdx, setImageIdx] = useState(0);
 
-  function openDesign(idx: number) {
-    setOpenIdx(idx);
-    setImageIdx(0);
-  }
-  function close() {
-    setOpenIdx(null);
-  }
-
   return (
     <>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
         {designs.map((d, i) => (
-          <PortfolioCard key={d.id} design={d} onClick={() => openDesign(i)} />
+          <PortfolioCard
+            key={d.id}
+            design={d}
+            onClick={() => {
+              setOpenIdx(i);
+              setImageIdx(0);
+            }}
+          />
         ))}
       </div>
 
@@ -45,9 +44,9 @@ export function PortfolioGallery({ designs }: { designs: GalleryDesign[] }) {
           design={designs[openIdx]}
           imageIdx={imageIdx}
           setImageIdx={setImageIdx}
-          onClose={close}
-          onPrevDesign={openIdx > 0 ? () => openDesign(openIdx - 1) : null}
-          onNextDesign={openIdx < designs.length - 1 ? () => openDesign(openIdx + 1) : null}
+          onClose={() => setOpenIdx(null)}
+          onPrevDesign={openIdx > 0 ? () => { setOpenIdx(openIdx - 1); setImageIdx(0); } : null}
+          onNextDesign={openIdx < designs.length - 1 ? () => { setOpenIdx(openIdx + 1); setImageIdx(0); } : null}
         />
       )}
     </>
@@ -57,33 +56,39 @@ export function PortfolioGallery({ designs }: { designs: GalleryDesign[] }) {
 function PortfolioCard({ design, onClick }: { design: GalleryDesign; onClick: () => void }) {
   const thumb = design.signed_urls[0];
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      className="block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 rounded-lg"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className="group cursor-zoom-in select-none rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
     >
-      <Card className="group cursor-zoom-in overflow-hidden p-0 transition hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10">
+      <Card className="overflow-hidden p-0 transition hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10">
         <div className="relative aspect-square overflow-hidden bg-muted">
           {thumb ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={thumb}
               alt={design.name}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              className="pointer-events-none h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
               loading="lazy"
+              draggable={false}
             />
           ) : (
             <div className="flex h-full items-center justify-center text-4xl text-muted-foreground">
               <Palette className="h-10 w-10" />
             </div>
           )}
-          {/* Multi-image hint */}
           {design.signed_urls.length > 1 && (
             <Badge className="absolute right-2 top-2 border-white/30 bg-black/60 text-[10px] text-white backdrop-blur">
               <ImageIcon className="mr-0.5 h-2.5 w-2.5" /> {design.signed_urls.length}
             </Badge>
           )}
-          {/* Hover overlay */}
           <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 transition group-hover:opacity-100">
             <span className="mb-3 rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white backdrop-blur">
               🔍 คลิกดูรายละเอียด
@@ -109,7 +114,7 @@ function PortfolioCard({ design, onClick }: { design: GalleryDesign; onClick: ()
           </div>
         </div>
       </Card>
-    </button>
+    </div>
   );
 }
 
@@ -141,7 +146,6 @@ function DesignLightbox({
     setImageIdx((imageIdx + 1) % images.length);
   }, [hasMultiple, imageIdx, images.length, setImageIdx]);
 
-  // Keyboard nav
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -154,7 +158,6 @@ function DesignLightbox({
       }
     }
     window.addEventListener("keydown", handleKey);
-    // Lock body scroll
     document.body.style.overflow = "hidden";
     return () => {
       window.removeEventListener("keydown", handleKey);
@@ -164,11 +167,14 @@ function DesignLightbox({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-black/95 backdrop-blur-md"
+      className="fixed inset-0 z-[100] flex flex-col bg-black/95 backdrop-blur-md"
       onClick={onClose}
     >
       {/* Top bar */}
-      <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-2 text-white sm:px-6 sm:py-3" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-2 text-white sm:px-6 sm:py-3"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <Badge variant="outline" className="border-white/30 font-mono text-[10px] text-white">
@@ -193,8 +199,10 @@ function DesignLightbox({
       </div>
 
       {/* Main image */}
-      <div className="relative flex flex-1 items-center justify-center overflow-hidden p-3 sm:p-6" onClick={(e) => e.stopPropagation()}>
-        {/* Prev image */}
+      <div
+        className="relative flex flex-1 items-center justify-center overflow-hidden p-3 sm:p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
         {hasMultiple && (
           <button
             type="button"
@@ -206,7 +214,6 @@ function DesignLightbox({
           </button>
         )}
 
-        {/* Image */}
         {currentImg ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -221,7 +228,6 @@ function DesignLightbox({
           </div>
         )}
 
-        {/* Next image */}
         {hasMultiple && (
           <button
             type="button"
@@ -233,7 +239,6 @@ function DesignLightbox({
           </button>
         )}
 
-        {/* Image counter */}
         {hasMultiple && (
           <div className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-black/60 px-3 py-1 text-xs text-white">
             {imageIdx + 1} / {images.length}
@@ -243,7 +248,10 @@ function DesignLightbox({
 
       {/* Thumbnails strip */}
       {hasMultiple && (
-        <div className="border-t border-white/10 px-3 py-2 sm:px-6" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="border-t border-white/10 px-3 py-2 sm:px-6"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="flex gap-2 overflow-x-auto">
             {images.map((url, i) => (
               <button
@@ -297,14 +305,16 @@ function DesignLightbox({
               ))}
             </div>
           </div>
-          <Button asChild className="shrink-0 bg-gradient-to-r from-orange-500 to-rose-500 text-white hover:shadow-lg">
+          <Button
+            asChild
+            className="shrink-0 bg-gradient-to-r from-orange-500 to-rose-500 text-white hover:shadow-lg"
+          >
             <Link href={`/quote?ref=${design.code}`}>
               <Sparkles className="h-4 w-4" /> ขอใบเสนอราคาแบบนี้
             </Link>
           </Button>
         </div>
 
-        {/* Navigate between designs */}
         {(onPrevDesign || onNextDesign) && (
           <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/10 pt-2 sm:pt-3">
             <button
