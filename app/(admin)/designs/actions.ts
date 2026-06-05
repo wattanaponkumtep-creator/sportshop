@@ -87,6 +87,19 @@ export async function toggleFavoriteDesign(id: string, value: boolean) {
   return { ok: true as const };
 }
 
+export async function togglePublicDesign(id: string, value: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("designs")
+    .update({ is_public: value })
+    .eq("id", id);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath("/designs");
+  revalidatePath(`/designs/${id}`);
+  revalidatePath("/portfolio");
+  return { ok: true as const };
+}
+
 export async function deleteDesign(id: string) {
   const supabase = await createClient();
 

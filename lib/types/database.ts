@@ -89,6 +89,51 @@ export interface FactoryMessage {
   created_at: string;
 }
 
+export interface CatalogCategory {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  position: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface CatalogItem {
+  id: string;
+  category_id: string;
+  name: string;
+  description: string | null;
+  thumbnail_path: string | null;
+  image_paths: string[];
+  attributes: Record<string, unknown>;
+  is_active: boolean;
+  position: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type InquiryStatus = "new" | "contacted" | "quoted" | "converted" | "rejected";
+
+export interface Inquiry {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  line_id: string | null;
+  team_name: string | null;
+  product_type: string | null;
+  quantity: number | null;
+  budget: number | null;
+  message: string | null;
+  status: InquiryStatus;
+  converted_to_customer_id: string | null;
+  admin_note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Design {
   id: string;
   code: string;
@@ -102,6 +147,7 @@ export interface Design {
   suggested_price: number | null;
   suggested_cost: number | null;
   is_favorite: boolean;
+  is_public: boolean;
   use_count: number;
   note: string | null;
   created_by: string | null;
@@ -361,6 +407,9 @@ export type Database = {
       shop_info: TableDef<ShopInfo>;
       job_line_items: TableDef<JobLineItem>;
       factory_messages: TableDef<FactoryMessage>;
+      catalog_categories: TableDef<CatalogCategory>;
+      catalog_items: TableDef<CatalogItem>;
+      inquiries: TableDef<Inquiry>;
       designs: TableDef<Design>;
       customer_comments: TableDef<{ id: string; job_id: string; author_name: string | null; message: string; created_at: string }>;
     };
@@ -401,6 +450,23 @@ export type Database = {
       factory_mark_group_produced: {
         Args: { p_token: string; p_item_type: string; p_produced: boolean };
         Returns: number;
+      };
+      get_public_catalog: { Args: Record<string, never>; Returns: unknown };
+      get_public_catalog_category: { Args: { p_slug: string }; Returns: unknown };
+      get_public_portfolio: { Args: Record<string, never>; Returns: unknown };
+      submit_inquiry: {
+        Args: {
+          p_name: string;
+          p_phone?: string | null;
+          p_email?: string | null;
+          p_line_id?: string | null;
+          p_team_name?: string | null;
+          p_product_type?: string | null;
+          p_quantity?: number | null;
+          p_budget?: number | null;
+          p_message?: string | null;
+        };
+        Returns: string;
       };
     };
     Enums: {

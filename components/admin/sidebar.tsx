@@ -1,14 +1,16 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Briefcase, Factory, LogOut, Shirt, BarChart3, Settings, X, MessageSquare, Palette } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, Factory, LogOut, Shirt, BarChart3, Settings, X, MessageSquare, Palette, Layers, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "./sidebar-context";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/jobs", label: "งาน / JOBs", icon: Briefcase },
+  { href: "/inquiries", label: "ใบขอราคา", icon: Sparkles },
   { href: "/designs", label: "คลังดีไซน์", icon: Palette },
+  { href: "/catalog", label: "Catalog", icon: Layers },
   { href: "/customers", label: "ลูกค้า", icon: Users },
   { href: "/factories", label: "โรงงาน", icon: Factory },
   { href: "/templates", label: "ข้อความ", icon: MessageSquare },

@@ -15,6 +15,7 @@ import {
 } from "@/lib/constants";
 import { DesignGallery } from "@/components/designs/design-gallery";
 import { DeleteDesignButton } from "@/components/designs/delete-design-button";
+import { PublicToggle } from "@/components/designs/public-toggle";
 import { orderedDesignImages } from "@/lib/designs";
 import type { Customer, Design, Job } from "@/lib/types/database";
 
@@ -95,6 +96,7 @@ export default async function DesignDetailPage({ params }: { params: Promise<{ i
                 <Edit className="h-4 w-4" /> แก้ไข
               </Link>
             </Button>
+            <PublicToggle id={d.id} initial={d.is_public} />
             <DeleteDesignButton id={d.id} code={d.code} name={d.name} />
           </div>
 
