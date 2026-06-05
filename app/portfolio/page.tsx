@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/server";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Palette, Sparkles } from "lucide-react";
 import { PublicHeader, PublicFooter } from "@/components/public/public-layout";
-import { SPORT_LABEL, DESIGN_COLOR_HEX } from "@/lib/constants";
+import { PortfolioGallery, type GalleryDesign } from "@/components/public/portfolio-gallery";
 
 export const dynamic = "force-dynamic";
 
@@ -26,15 +24,36 @@ export default async function PortfolioPage() {
   const { data } = await supabase.rpc("get_public_portfolio");
   const designs = (data as unknown as PublicDesign[]) ?? [];
 
-  // Pre-sign thumbnails
-  const thumbs = designs.map((d) => d.thumbnail_path).filter((p): p is string => !!p);
+  // Collect ALL image paths from every design (not just thumbnails)
+  // — so the lightbox can show full-resolution images for any design
+  const ordered = designs.map((d) => {
+    const all = d.thumbnail_path
+      ? [d.thumbnail_path, ...d.image_paths.filter((p) => p !== d.thumbnail_path)]
+      : d.image_paths;
+    return { design: d, paths: all };
+  });
+
+  const allPaths = [...new Set(ordered.flatMap((o) => o.paths))];
+
   const urlMap = new Map<string, string>();
-  if (thumbs.length > 0) {
-    const { data: signed } = await supabase.storage.from("job-files").createSignedUrls(thumbs, 3600);
+  if (allPaths.length > 0) {
+    // Batch signed URLs in one round-trip
+    const { data: signed } = await supabase.storage.from("job-files").createSignedUrls(allPaths, 3600);
     for (const s of signed ?? []) {
       if (s.path && s.signedUrl) urlMap.set(s.path, s.signedUrl);
     }
   }
+
+  const galleryDesigns: GalleryDesign[] = ordered.map((o) => ({
+    id: o.design.id,
+    code: o.design.code,
+    name: o.design.name,
+    description: o.design.description,
+    sport_type: o.design.sport_type,
+    colors: o.design.colors,
+    tags: o.design.tags,
+    signed_urls: o.paths.map((p) => urlMap.get(p)).filter((u): u is string => !!u),
+  }));
 
   return (
     <>
@@ -50,7 +69,7 @@ export default async function PortfolioPage() {
               ผลงานที่เคยทำ
             </h1>
             <p className="mx-auto mt-3 max-w-2xl text-base text-muted-foreground sm:text-lg">
-              ตัวอย่างเสื้อกีฬาที่เราออกแบบและผลิต — เลือกแบบที่ชอบเพื่อขอใบเสนอราคา
+              ตัวอย่างเสื้อกีฬาที่เราออกแบบและผลิต — <strong>คลิกที่รูปเพื่อดูใหญ่/ลายละเอียด</strong>
             </p>
             <div className="mt-6">
               <Link
@@ -65,59 +84,16 @@ export default async function PortfolioPage() {
 
         {/* Gallery */}
         <section className="container mx-auto max-w-6xl px-4 py-8 sm:py-12">
-          {designs.length === 0 ? (
+          {galleryDesigns.length === 0 ? (
             <div className="rounded-md border border-dashed border-border bg-card/40 p-12 text-center text-muted-foreground">
               ยังไม่มีผลงานเผยแพร่ — กรุณาเปิดเผยแพร่ในระบบ admin (ติ๊ก &quot;เผยแพร่สาธารณะ&quot; ที่แต่ละดีไซน์)
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
-              {designs.map((d) => (
-                <PortfolioCard key={d.id} design={d} thumbnailUrl={d.thumbnail_path ? urlMap.get(d.thumbnail_path) : undefined} />
-              ))}
-            </div>
+            <PortfolioGallery designs={galleryDesigns} />
           )}
         </section>
       </main>
       <PublicFooter />
     </>
-  );
-}
-
-function PortfolioCard({ design, thumbnailUrl }: { design: PublicDesign; thumbnailUrl?: string }) {
-  return (
-    <Card className="group overflow-hidden p-0 transition hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10">
-      <div className="aspect-square overflow-hidden bg-muted">
-        {thumbnailUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={thumbnailUrl}
-            alt={design.name}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center text-4xl text-muted-foreground">
-            <Palette className="h-10 w-10" />
-          </div>
-        )}
-      </div>
-      <div className="space-y-1.5 p-3">
-        <div className="line-clamp-1 text-sm font-semibold">{design.name}</div>
-        <div className="flex flex-wrap items-center gap-1">
-          {design.sport_type && (
-            <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
-              {SPORT_LABEL[design.sport_type] ?? design.sport_type}
-            </Badge>
-          )}
-          {design.colors.slice(0, 4).map((c) => (
-            <span
-              key={c}
-              className="inline-block h-3 w-3 rounded-full border border-border/60"
-              style={{ backgroundColor: DESIGN_COLOR_HEX[c] ?? c }}
-            />
-          ))}
-        </div>
-      </div>
-    </Card>
   );
 }
