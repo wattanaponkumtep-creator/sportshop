@@ -60,7 +60,7 @@ function PortfolioCard({ design, onClick }: { design: GalleryDesign; onClick: ()
     <button
       type="button"
       onClick={onClick}
-      className="text-left"
+      className="block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 rounded-lg"
     >
       <Card className="group cursor-zoom-in overflow-hidden p-0 transition hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10">
         <div className="relative aspect-square overflow-hidden bg-muted">
