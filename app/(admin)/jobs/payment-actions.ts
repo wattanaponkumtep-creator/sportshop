@@ -72,6 +72,36 @@ export async function deletePayment(paymentId: string, jobId: string) {
   return { ok: true as const };
 }
 
+export async function updateJobDiscount(jobId: string, discount: number, note?: string | null) {
+  if (!Number.isFinite(discount) || discount < 0) {
+    return { ok: false as const, error: "ส่วนลดต้องเป็นเลขบวก (≥ 0)" };
+  }
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const value = Math.round(discount * 100) / 100;
+
+  const { error } = await supabase
+    .from("jobs")
+    .update({ discount: value })
+    .eq("id", jobId);
+  if (error) return { ok: false as const, error: error.message };
+
+  await supabase.from("job_timeline").insert({
+    job_id: jobId,
+    event_type: "discount_changed",
+    description: value > 0
+      ? `ตั้งส่วนลด ${value.toLocaleString("th-TH")} บาท${note ? ` (${note})` : ""}`
+      : "ลบส่วนลด",
+    actor_id: user?.id ?? null,
+  });
+
+  revalidatePath(`/jobs/${jobId}`);
+  revalidatePath("/reports");
+  return { ok: true as const };
+}
+
 export async function createSignedSlipUrl(slipPath: string) {
   const supabase = await createClient();
   const { data, error } = await supabase.storage.from("job-files").createSignedUrl(slipPath, 3600);

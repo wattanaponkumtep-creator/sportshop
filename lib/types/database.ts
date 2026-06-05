@@ -175,6 +175,7 @@ export interface Job {
   product_type: string | null;
   quantity: number;
   sale_price: number;
+  discount: number;
   cost: number;
   shipping_cost: number;
   other_cost: number;

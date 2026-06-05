@@ -15,6 +15,7 @@ import { toast } from "@/components/ui/use-toast";
 import { addPayment, deletePayment, createSignedSlipUrl } from "@/app/(admin)/jobs/payment-actions";
 import { createClient } from "@/lib/supabase/client";
 import { PaymentRequestDialog } from "./payment-request-dialog";
+import { DiscountEditor } from "./discount-editor";
 import type { Payment, PaymentType } from "@/lib/types/database";
 
 type PaymentChannel = {
@@ -42,6 +43,7 @@ export function JobPayments({
   customerChannels,
   shopInfo,
   salePrice,
+  discount,
   payments,
 }: {
   jobId: string;
@@ -53,6 +55,7 @@ export function JobPayments({
   customerChannels: PaymentChannel[];
   shopInfo: PaymentShopInfo | null;
   salePrice: number;
+  discount: number;
   payments: Payment[];
 }) {
   const [adding, setAdding] = useState(false);
@@ -62,7 +65,8 @@ export function JobPayments({
     if (p.type === "refund") return sum - Number(p.amount);
     return sum + Number(p.amount);
   }, 0);
-  const outstanding = Number(salePrice) - paid;
+  const netAmount = Math.max(0, Number(salePrice) - Number(discount));
+  const outstanding = netAmount - paid;
 
   const status =
     outstanding <= 0 && paid > 0 ? "paid" : paid > 0 ? "partial" : "unpaid";
@@ -89,30 +93,49 @@ export function JobPayments({
           <CardTitle className="inline-flex items-center gap-2">
             <Wallet className="h-5 w-5 text-emerald-400" /> สรุปการเงิน
           </CardTitle>
-          {outstanding > 0 && (
-            <PaymentRequestDialog
-              jobCode={jobCode}
-              jobLabel={jobLabel}
-              trackToken={trackToken}
-              customerName={customerName}
-              phone={customerPhone}
-              channels={customerChannels}
-              salePrice={Number(salePrice)}
-              totalPaid={paid}
-              shopInfo={shopInfo}
-            />
-          )}
+          <div className="flex flex-wrap gap-2">
+            <DiscountEditor jobId={jobId} salePrice={Number(salePrice)} currentDiscount={Number(discount)} />
+            {outstanding > 0 && (
+              <PaymentRequestDialog
+                jobCode={jobCode}
+                jobLabel={jobLabel}
+                trackToken={trackToken}
+                customerName={customerName}
+                phone={customerPhone}
+                channels={customerChannels}
+                salePrice={netAmount}
+                totalPaid={paid}
+                shopInfo={shopInfo}
+              />
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <SummaryItem label="ราคาขาย" value={formatBaht(Number(salePrice))} />
-            <SummaryItem label="ชำระแล้ว" value={formatBaht(paid)} accent="text-emerald-400" />
+          <div className={`grid gap-3 ${discount > 0 ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
+            <SummaryItem label="ราคาเต็ม" value={formatBaht(Number(salePrice))} />
+            {discount > 0 && (
+              <SummaryItem
+                label={`ส่วนลด (${((discount / Number(salePrice)) * 100).toFixed(0)}%)`}
+                value={`-${formatBaht(Number(discount))}`}
+                accent="text-rose-400"
+              />
+            )}
+            <SummaryItem
+              label={discount > 0 ? "ราคาสุทธิ" : "ชำระแล้ว"}
+              value={discount > 0 ? formatBaht(netAmount) : formatBaht(paid)}
+              accent={discount > 0 ? "text-foreground" : "text-emerald-400"}
+            />
             <SummaryItem
               label="คงเหลือ"
               value={formatBaht(outstanding)}
               accent={outstanding > 0 ? "text-amber-400" : "text-emerald-400"}
             />
           </div>
+          {discount > 0 && (
+            <div className="mt-3 text-xs text-muted-foreground">
+              ชำระแล้ว: <span className="font-semibold text-emerald-400">{formatBaht(paid)}</span>
+            </div>
+          )}
           <div className="mt-4">
             <PaymentStatusBadge status={status} outstanding={outstanding} />
           </div>

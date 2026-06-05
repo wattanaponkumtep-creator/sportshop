@@ -23,7 +23,7 @@ export function getMonthBoundsBangkok(monthsAgo = 0) {
 
 export type ReportJob = Pick<
   Job,
-  "id" | "status" | "sale_price" | "cost" | "shipping_cost" | "other_cost" | "quantity" | "received_at" | "due_date" | "updated_at" | "customer_id" | "factory_id"
+  "id" | "status" | "sale_price" | "discount" | "cost" | "shipping_cost" | "other_cost" | "quantity" | "received_at" | "due_date" | "updated_at" | "customer_id" | "factory_id"
 > & {
   customers?: { name: string } | { name: string }[] | null;
   factories?: { name: string } | { name: string }[] | null;
@@ -35,10 +35,15 @@ function isClosed(j: ReportJob): boolean {
   return j.status === "shipped" || j.status === "completed";
 }
 
+// Net price after discount
+function netSale(j: ReportJob): number {
+  return Math.max(0, Number(j.sale_price ?? 0) - Number(j.discount ?? 0));
+}
+
 export function calcRevenue(jobs: ReportJob[]) {
   return jobs
     .filter((j) => j.status !== "cancelled")
-    .reduce((sum, j) => sum + Number(j.sale_price ?? 0), 0);
+    .reduce((sum, j) => sum + netSale(j), 0);
 }
 
 export function calcProfit(jobs: ReportJob[]) {
@@ -47,7 +52,7 @@ export function calcProfit(jobs: ReportJob[]) {
     .reduce(
       (sum, j) =>
         sum +
-        Number(j.sale_price ?? 0) -
+        netSale(j) -
         Number(j.cost ?? 0) -
         Number(j.shipping_cost ?? 0) -
         Number(j.other_cost ?? 0),
@@ -70,7 +75,7 @@ export async function getReportData() {
     supabase
       .from("jobs")
       .select(
-        "id, status, sale_price, cost, shipping_cost, other_cost, quantity, received_at, due_date, updated_at, customer_id, factory_id, customers(name), factories(name)"
+        "id, status, sale_price, discount, cost, shipping_cost, other_cost, quantity, received_at, due_date, updated_at, customer_id, factory_id, customers(name), factories(name)"
       )
       .or(`received_at.gte.${allTimeStart},updated_at.gte.${allTimeStart}`)
       .order("received_at", { ascending: false }),
@@ -128,7 +133,7 @@ export async function getReportData() {
   for (const j of allJobs) {
     if (j.status === "cancelled") continue;
     const paid = paidByJob.get(j.id) ?? 0;
-    const remaining = Number(j.sale_price ?? 0) - paid;
+    const remaining = netSale(j) - paid;
     if (remaining > 0) outstandingTotal += remaining;
   }
 
@@ -147,7 +152,7 @@ export async function getReportData() {
     if (!j.customer_id) continue;
     const cust = Array.isArray(j.customers) ? j.customers[0] : j.customers;
     const cur = customerStats.get(j.customer_id) ?? { name: cust?.name ?? "-", revenue: 0, count: 0 };
-    cur.revenue += Number(j.sale_price ?? 0);
+    cur.revenue += netSale(j);
     cur.count++;
     customerStats.set(j.customer_id, cur);
   }
