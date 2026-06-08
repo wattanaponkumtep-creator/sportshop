@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Trash2, Receipt, Upload, ExternalLink, Wallet } from "lucide-react";
+import { Plus, Trash2, Receipt, Upload, ExternalLink, Wallet, TrendingUp, TrendingDown } from "lucide-react";
 import { PAYMENT_TYPE_LABEL } from "@/lib/constants";
 import { formatBaht, formatDateTH, cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
@@ -44,6 +44,9 @@ export function JobPayments({
   shopInfo,
   salePrice,
   discount,
+  cost,
+  shippingCost,
+  otherCost,
   payments,
 }: {
   jobId: string;
@@ -56,6 +59,9 @@ export function JobPayments({
   shopInfo: PaymentShopInfo | null;
   salePrice: number;
   discount: number;
+  cost: number;
+  shippingCost: number;
+  otherCost: number;
   payments: Payment[];
 }) {
   const [adding, setAdding] = useState(false);
@@ -67,6 +73,11 @@ export function JobPayments({
   }, 0);
   const netAmount = Math.max(0, Number(salePrice) - Number(discount));
   const outstanding = netAmount - paid;
+
+  // Profit = ราคาสุทธิ - ต้นทุน - ค่าส่ง - ค่าอื่น
+  const totalCost = Number(cost) + Number(shippingCost) + Number(otherCost);
+  const profit = netAmount - totalCost;
+  const margin = netAmount > 0 ? (profit / netAmount) * 100 : 0;
 
   const status =
     outstanding <= 0 && paid > 0 ? "paid" : paid > 0 ? "partial" : "unpaid";
@@ -141,6 +152,17 @@ export function JobPayments({
           </div>
         </CardContent>
       </Card>
+
+      {/* Profit summary — admin view */}
+      <ProfitCard
+        netAmount={netAmount}
+        cost={Number(cost)}
+        shippingCost={Number(shippingCost)}
+        otherCost={Number(otherCost)}
+        totalCost={totalCost}
+        profit={profit}
+        margin={margin}
+      />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -239,6 +261,99 @@ function SummaryItem({ label, value, accent }: { label: string; value: string; a
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className={cn("mt-1 text-lg font-bold tabular-nums", accent)}>{value}</div>
     </div>
+  );
+}
+
+function ProfitCard({
+  netAmount,
+  cost,
+  shippingCost,
+  otherCost,
+  totalCost,
+  profit,
+  margin,
+}: {
+  netAmount: number;
+  cost: number;
+  shippingCost: number;
+  otherCost: number;
+  totalCost: number;
+  profit: number;
+  margin: number;
+}) {
+  const isPositive = profit >= 0;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="inline-flex items-center gap-2">
+          {isPositive ? (
+            <TrendingUp className="h-5 w-5 text-emerald-400" />
+          ) : (
+            <TrendingDown className="h-5 w-5 text-rose-400" />
+          )}
+          กำไรของงานนี้
+          <Badge variant="outline" className="ml-1 text-[10px] text-muted-foreground">
+            สำหรับ admin
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {/* Breakdown */}
+        <div className="space-y-2 rounded-md border border-border bg-card/40 p-3 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">ราคาสุทธิ (หลังหักส่วนลด)</span>
+            <span className="font-mono font-semibold text-foreground">{formatBaht(netAmount)}</span>
+          </div>
+          <div className="flex items-center justify-between text-rose-400">
+            <span>− ต้นทุนผลิต</span>
+            <span className="font-mono">{formatBaht(cost)}</span>
+          </div>
+          <div className="flex items-center justify-between text-rose-400">
+            <span>− ค่าส่ง</span>
+            <span className="font-mono">{formatBaht(shippingCost)}</span>
+          </div>
+          <div className="flex items-center justify-between text-rose-400">
+            <span>− ค่าอื่นๆ</span>
+            <span className="font-mono">{formatBaht(otherCost)}</span>
+          </div>
+          <div className="flex items-center justify-between border-t border-border pt-2 text-xs text-muted-foreground">
+            <span>รวมต้นทุนทั้งหมด</span>
+            <span className="font-mono">{formatBaht(totalCost)}</span>
+          </div>
+        </div>
+
+        {/* Profit display */}
+        <div
+          className={cn(
+            "mt-3 rounded-md border-2 p-3 text-center",
+            isPositive ? "border-emerald-500/40 bg-emerald-500/10" : "border-rose-500/40 bg-rose-500/10",
+          )}
+        >
+          <div className="text-[11px] uppercase tracking-wide text-muted-foreground">กำไรสุทธิ</div>
+          <div
+            className={cn(
+              "font-display text-2xl font-bold tabular-nums sm:text-3xl",
+              isPositive ? "text-emerald-400" : "text-rose-400",
+            )}
+          >
+            {profit < 0 ? "-" : ""}
+            {formatBaht(Math.abs(profit))}
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            Margin:{" "}
+            <span className={isPositive ? "font-semibold text-emerald-400" : "font-semibold text-rose-400"}>
+              {margin.toFixed(1)}%
+            </span>
+          </div>
+        </div>
+
+        {totalCost === 0 && (
+          <div className="mt-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs text-amber-300">
+            💡 ยังไม่ได้กรอกต้นทุน — กำไรอาจไม่แม่นยำ ใส่ค่าใน tab &quot;รายละเอียด&quot; → ต้นทุน/ค่าส่ง/ค่าอื่น
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

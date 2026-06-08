@@ -210,6 +210,9 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             shopInfo={shopInfo ?? null}
             salePrice={Number(job.sale_price)}
             discount={Number(job.discount ?? 0)}
+            cost={Number(job.cost ?? 0)}
+            shippingCost={Number(job.shipping_cost ?? 0)}
+            otherCost={Number(job.other_cost ?? 0)}
             payments={payments ?? []}
           />
         </TabsContent>
