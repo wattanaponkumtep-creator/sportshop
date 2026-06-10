@@ -20,40 +20,40 @@ export function TrendChart({
 }) {
   const allValues = series.flatMap((s) => s.values);
   const maxValue = Math.max(...allValues, 0);
-  const minValue = Math.min(...allValues, 0);
-  const range = Math.max(maxValue - minValue, 1);
+  const range = Math.max(maxValue, 1); // bars grow from 0
+  const hasAnyData = allValues.some((v) => v !== 0);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Legend */}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
         {series.map((s) => (
-          <div key={s.key} className="flex items-center gap-1.5 text-xs">
-            <span className={cn("h-2.5 w-2.5 rounded-full", s.color)} />
-            <span className="text-muted-foreground">{s.label}</span>
-          </div>
+          <span key={s.key} className="inline-flex items-center gap-1.5">
+            <span className={cn("h-2.5 w-2.5 rounded-sm", s.color)} />
+            {s.label}
+          </span>
         ))}
       </div>
 
-      {/* Bars (grouped) */}
-      <div className="relative h-44 sm:h-56">
-        <div className="absolute inset-0 flex items-end gap-1 sm:gap-2">
+      {!hasAnyData ? (
+        <p className="rounded-md border border-dashed border-border bg-card/40 py-10 text-center text-xs text-muted-foreground">
+          ยังไม่มีข้อมูลในช่วง 6 เดือน
+        </p>
+      ) : (
+        <div className="flex h-48 items-end gap-2">
           {labels.map((label, i) => (
-            <div key={i} className="flex flex-1 flex-col items-center justify-end gap-1">
-              <div className="flex w-full items-end justify-center gap-0.5">
+            <div key={i} className="flex flex-1 flex-col items-center gap-1">
+              <div className="flex h-full w-full items-end justify-center gap-0.5">
                 {series.map((s) => {
                   const v = s.values[i] ?? 0;
-                  const heightPct = range > 0 ? ((v - minValue) / range) * 100 : 0;
+                  const heightPct = (v / range) * 100;
                   return (
-                    <div
-                      key={s.key}
-                      className={cn("group/bar relative w-full max-w-[14px] rounded-t-sm transition", s.color)}
-                      style={{ height: `${Math.max(heightPct, 1)}%` }}
-                      title={`${s.label}: ${yFormatter(v)}`}
-                    >
-                      <div className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-popover px-1.5 py-0.5 text-[10px] opacity-0 shadow-md transition group-hover/bar:opacity-100">
-                        {yFormatter(v)}
-                      </div>
+                    <div key={s.key} className="flex h-full w-full max-w-[18px] items-end">
+                      <div
+                        className={cn("w-full rounded-t-sm transition-all", s.color)}
+                        style={{ height: `${heightPct}%`, minHeight: v > 0 ? "2px" : "0" }}
+                        title={`${label} · ${s.label}: ${yFormatter(v)}`}
+                      />
                     </div>
                   );
                 })}
@@ -62,7 +62,7 @@ export function TrendChart({
             </div>
           ))}
         </div>
-      </div>
+      )}
     </div>
   );
 }

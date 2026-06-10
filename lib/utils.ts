@@ -29,6 +29,16 @@ export function formatBaht(amount: number | null | undefined) {
   return new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 }).format(amount);
 }
 
+/** Compact number for chart labels: 40340 → "40.3k", 1200000 → "1.2M" */
+export function formatCompact(amount: number | null | undefined) {
+  if (amount == null) return "-";
+  const abs = Math.abs(amount);
+  const sign = amount < 0 ? "-" : "";
+  if (abs >= 1_000_000) return `${sign}${(abs / 1_000_000).toFixed(abs >= 10_000_000 ? 0 : 1)}M`;
+  if (abs >= 1_000) return `${sign}${(abs / 1_000).toFixed(abs >= 100_000 ? 0 : 1)}k`;
+  return `${sign}${Math.round(abs)}`;
+}
+
 export function generateTrackToken() {
   return Array.from(crypto.getRandomValues(new Uint8Array(16)))
     .map((b) => b.toString(16).padStart(2, "0"))
