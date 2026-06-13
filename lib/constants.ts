@@ -103,6 +103,59 @@ export const MOCKUP_STATUS_COLOR: Record<MockupStatus, string> = {
   rejected: "bg-red-500/20 text-red-200 border-red-500/40",
 };
 
+// ---------- Sizes (CS → 10XL) ----------
+// ลำดับไซส์มาตรฐานของร้าน — ใช้ร่วมกันทุก component (size summary, receiving, factory portal)
+export const SIZE_ORDER = [
+  "CS",   // เด็กเล็ก
+  "CM",   // เด็กกลาง
+  "CL",   // เด็กโต
+  "XS",
+  "SS",
+  "S",
+  "M",
+  "L",
+  "XL",
+  "2XL",
+  "3XL",
+  "4XL",
+  "5XL",
+  "6XL",
+  "7XL",
+  "8XL",
+  "9XL",
+  "10XL",
+] as const;
+
+const SIZE_INDEX: Record<string, number> = Object.fromEntries(
+  SIZE_ORDER.map((s, i) => [s, i]),
+);
+
+/** Normalize a size string: trim + uppercase + map common variants */
+export function normalizeSize(raw: string | null | undefined): string {
+  if (!raw) return "";
+  let s = raw.trim().toUpperCase();
+  // common variants → canonical
+  s = s
+    .replace(/^XXL$/, "2XL")
+    .replace(/^XXXL$/, "3XL")
+    .replace(/^XXXXL$/, "4XL")
+    .replace(/\s+/g, "");
+  // "2XL" style: if it's like "XXL...", convert repeated X
+  const repeatX = s.match(/^(X{2,})L$/);
+  if (repeatX) s = `${repeatX[1].length}XL`;
+  return s;
+}
+
+/** Sort size strings by the canonical SIZE_ORDER; unknowns go last alphabetically */
+export function sortSizes(sizes: string[]): string[] {
+  return sizes.slice().sort((a, b) => {
+    const ai = SIZE_INDEX[a.toUpperCase()] ?? Infinity;
+    const bi = SIZE_INDEX[b.toUpperCase()] ?? Infinity;
+    if (ai !== bi) return ai - bi;
+    return a.localeCompare(b);
+  });
+}
+
 // ---------- Design Library ----------
 function indexBy<T, K extends keyof T, V extends keyof T>(
   arr: readonly T[],

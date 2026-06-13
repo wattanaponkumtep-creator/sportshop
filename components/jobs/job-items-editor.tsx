@@ -7,7 +7,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/components/ui/use-toast";
 import { saveJobItems } from "@/app/(admin)/jobs/actions";
-import { ITEM_TYPE_PRESETS } from "@/lib/constants";
+import { ITEM_TYPE_PRESETS, SIZE_ORDER, normalizeSize } from "@/lib/constants";
 import type { JobItem } from "@/lib/types/database";
 
 type Row = {
@@ -87,6 +87,11 @@ export function JobItemsEditor({ jobId, initialItems }: { jobId: string; initial
                 <option key={t} value={t} />
               ))}
             </datalist>
+            <datalist id="size-presets">
+              {SIZE_ORDER.map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
 
             <Table>
               <TableHeader>
@@ -120,8 +125,10 @@ export function JobItemsEditor({ jobId, initialItems }: { jobId: string; initial
                     </TableCell>
                     <TableCell>
                       <Input
+                        list="size-presets"
                         value={row.size}
                         onChange={(e) => updateRow(idx, "size", e.target.value.toUpperCase())}
+                        onBlur={(e) => updateRow(idx, "size", normalizeSize(e.target.value))}
                         className="text-center font-mono uppercase"
                         placeholder="M"
                       />

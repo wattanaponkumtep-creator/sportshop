@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Ruler } from "lucide-react";
 import type { JobItem } from "@/lib/types/database";
 import { cn } from "@/lib/utils";
+import { sortSizes } from "@/lib/constants";
 
 export function SizeSummary({ items }: { items: JobItem[] }) {
   const summary = useMemo(() => {
@@ -24,17 +25,8 @@ export function SizeSummary({ items }: { items: JobItem[] }) {
       if (it.name) cur.people.push(it.name);
       bySize.set(size, cur);
     }
-    const sorted = Array.from(bySize.entries())
-      .map(([size, info]) => ({ size, ...info }))
-      .sort((a, b) => {
-        const order = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL"];
-        const ai = order.indexOf(a.size.toUpperCase());
-        const bi = order.indexOf(b.size.toUpperCase());
-        if (ai !== -1 && bi !== -1) return ai - bi;
-        if (ai !== -1) return -1;
-        if (bi !== -1) return 1;
-        return a.size.localeCompare(b.size);
-      });
+    const orderedSizes = sortSizes(Array.from(bySize.keys()));
+    const sorted = orderedSizes.map((size) => ({ size, ...bySize.get(size)! }));
     return { sorted, total, noSizeCount };
   }, [items]);
 

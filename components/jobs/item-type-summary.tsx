@@ -4,19 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Package } from "lucide-react";
 import type { JobItem } from "@/lib/types/database";
-
-const SIZE_ORDER = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL"];
-
-function sortSizes(sizes: string[]): string[] {
-  return sizes.slice().sort((a, b) => {
-    const ai = SIZE_ORDER.indexOf(a.toUpperCase());
-    const bi = SIZE_ORDER.indexOf(b.toUpperCase());
-    if (ai !== -1 && bi !== -1) return ai - bi;
-    if (ai !== -1) return -1;
-    if (bi !== -1) return 1;
-    return a.localeCompare(b);
-  });
-}
+import { sortSizes } from "@/lib/constants";
 
 export function ItemTypeSummary({ items }: { items: JobItem[] }) {
   const summary = useMemo(() => {

@@ -8,6 +8,7 @@ import { Users, ChevronDown, ChevronUp, Package, CheckCircle2, Circle, AlertTria
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { toggleItemProduced, markGroupProduced, postFactoryMessage } from "./actions";
+import { sortSizes } from "@/lib/constants";
 
 export type RosterItem = {
   id: string;
@@ -21,19 +22,6 @@ export type RosterItem = {
   produced: boolean;
   produced_at: string | null;
 };
-
-const SIZE_ORDER = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL", "6XL"];
-
-function sortSizes(sizes: string[]): string[] {
-  return sizes.slice().sort((a, b) => {
-    const ai = SIZE_ORDER.indexOf(a.toUpperCase());
-    const bi = SIZE_ORDER.indexOf(b.toUpperCase());
-    if (ai !== -1 && bi !== -1) return ai - bi;
-    if (ai !== -1) return -1;
-    if (bi !== -1) return 1;
-    return a.localeCompare(b);
-  });
-}
 
 function iconForType(t: string): { emoji: string; color: string } {
   const lower = t.toLowerCase();

@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { normalizeSize } from "@/lib/constants";
 
 export type ParsedRow = {
   name: string;
@@ -107,7 +108,7 @@ export function parseRosterFile(arrayBuffer: ArrayBuffer): ParseResult {
       const parsed: ParsedRow = {
         name: detected.name !== undefined ? cellToString(row[detected.name]) : "",
         number: detected.number !== undefined ? cellToString(row[detected.number]) : "",
-        size: detected.size !== undefined ? cellToString(row[detected.size]).toUpperCase() : "",
+        size: detected.size !== undefined ? normalizeSize(cellToString(row[detected.size])) : "",
         item_type: detected.item_type !== undefined ? cellToString(row[detected.item_type]) : "",
         quantity: 1,
         sponsor: detected.sponsor !== undefined ? cellToString(row[detected.sponsor]) : "",

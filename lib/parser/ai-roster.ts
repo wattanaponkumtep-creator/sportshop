@@ -1,5 +1,6 @@
 import "server-only";
 import type { ParsedRow } from "./roster-excel";
+import { normalizeSize } from "@/lib/constants";
 
 const GEMINI_MODELS = [
   "gemini-2.5-flash",
@@ -29,7 +30,14 @@ const SYSTEM_PROMPT = `คุณเป็นผู้ช่วยอ่านใ
 ฟิลด์ที่ต้องดึง:
   • name: ชื่อ-นามสกุล (string, "" ถ้าไม่ระบุ)
   • number: เบอร์เสื้อ (string, "" ถ้าไม่ระบุ)
-  • size: ไซส์ — UPPERCASE เช่น "M", "L", "XL", "2XL", "3XL" ("" ถ้าไม่ระบุ)
+  • size: ไซส์ — UPPERCASE ใช้รูปแบบมาตรฐานนี้ ("" ถ้าไม่ระบุ):
+      ไซส์เด็ก: "CS", "CM", "CL"
+      ไซส์ผู้ใหญ่: "XS", "SS", "S", "M", "L", "XL"
+      ไซส์ใหญ่: "2XL", "3XL", "4XL", "5XL", "6XL", "7XL", "8XL", "9XL", "10XL"
+      ** สำคัญ: แปลงรูปแบบให้เป็นมาตรฐาน เช่น
+         "XXL"→"2XL", "XXXL"→"3XL", "XXXXL"→"4XL"
+         "2XL", "3XL" คงไว้ตามเดิม
+         ถ้าเขียน "ไซส์ S" / "size M" → ตัดคำนำหน้าออก เหลือแค่ "S" / "M" **
   • item_type: ประเภทสินค้า — ใช้ค่าใดค่าหนึ่งนี้ (เลือกที่ตรงที่สุด):
       ## ระบุชนิดแขนได้ (priority สูงสุด ถ้าใบงานบอกชัด):
       - "เสื้อแขนสั้น"           (เฉพาะเสื้อแขนสั้น)
@@ -129,7 +137,7 @@ function normalizeRows(data: unknown): ParsedRow[] {
       return {
         name: getStr("name"),
         number: getStr("number"),
-        size: getStr("size").toUpperCase(),
+        size: normalizeSize(getStr("size")),
         item_type: getStr("item_type"),
         quantity: getNum("quantity"),
         sponsor: getStr("sponsor"),

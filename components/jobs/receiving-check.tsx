@@ -9,20 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { PackageCheck, CheckCircle2, AlertTriangle, AlertCircle, RotateCcw, Save } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { updateReceivingCounts } from "@/app/(admin)/jobs/actions";
+import { sortSizes } from "@/lib/constants";
 import type { JobItem } from "@/lib/types/database";
-
-const SIZE_ORDER = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL"];
-
-function sortSizes(sizes: string[]): string[] {
-  return sizes.slice().sort((a, b) => {
-    const ai = SIZE_ORDER.indexOf(a.toUpperCase());
-    const bi = SIZE_ORDER.indexOf(b.toUpperCase());
-    if (ai !== -1 && bi !== -1) return ai - bi;
-    if (ai !== -1) return -1;
-    if (bi !== -1) return 1;
-    return a.localeCompare(b);
-  });
-}
 
 type Props = {
   jobId: string;

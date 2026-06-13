@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "@/components/ui/use-toast";
 import { parseRosterFile, type ParseResult, type ParsedRow } from "@/lib/parser/roster-excel";
 import { saveJobItems } from "@/app/(admin)/jobs/actions";
-import { ITEM_TYPE_PRESETS } from "@/lib/constants";
+import { ITEM_TYPE_PRESETS, SIZE_ORDER, normalizeSize } from "@/lib/constants";
 
 function ItemTypeSummary({ rows }: { rows: ParsedRow[] }) {
   const summary = new Map<string, number>();
@@ -264,6 +264,11 @@ export function RosterUpload({ jobId, onImported }: { jobId: string; onImported?
                   <option key={t} value={t} />
                 ))}
               </datalist>
+              <datalist id="roster-size-presets">
+                {SIZE_ORDER.map((s) => (
+                  <option key={s} value={s} />
+                ))}
+              </datalist>
               <Table>
                 <TableHeader className="sticky top-0 bg-card">
                   <TableRow>
@@ -297,8 +302,10 @@ export function RosterUpload({ jobId, onImported }: { jobId: string; onImported?
                       </TableCell>
                       <TableCell>
                         <input
+                          list="roster-size-presets"
                           value={r.size}
                           onChange={(e) => updateRow(idx, "size", e.target.value.toUpperCase())}
+                          onBlur={(e) => updateRow(idx, "size", normalizeSize(e.target.value))}
                           className="w-full bg-transparent text-center font-mono text-sm uppercase focus:outline-none focus:ring-1 focus:ring-primary"
                         />
                       </TableCell>
