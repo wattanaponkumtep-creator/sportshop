@@ -59,6 +59,13 @@ export const PRIORITY_COLOR: Record<PriorityLevel, string> = {
   rush: "bg-red-500 text-white",
 };
 
+// ใช้ในข้อความแจ้งโรงงาน — banner เด่นๆ บอกความด่วน
+export const PRIORITY_BANNER: Record<PriorityLevel, string> = {
+  normal: "🟢 งานปกติ",
+  urgent: "🟠⚠️ งานด่วน — รบกวนเร่งให้หน่อยครับ ⚠️🟠",
+  rush: "🔴🚨 ด่วนมาก!! ต้องรีบที่สุด 🚨🔴",
+};
+
 export const FACTORY_STATUS_LABEL: Record<FactoryJobStatus, string> = {
   sent: "ส่งไฟล์แล้ว",
   producing: "กำลังผลิต",

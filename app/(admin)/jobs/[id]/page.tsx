@@ -231,6 +231,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                   jobCode={job.job_code}
                   jobLabel={job.job_label}
                   productType={job.product_type}
+                  priority={job.priority}
                   dueDate={job.due_date}
                   customerName={customer?.name ?? null}
                   customerPhone={customer?.phone ?? null}

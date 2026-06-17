@@ -8,15 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Factory, Copy, Check, Send, Loader2, MessageCircle, ExternalLink, MessageSquare, ListChecks, FileText } from "lucide-react";
 import { cn, formatDateTH, formatThaiFullDate } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
-import { PRODUCTION_STAGE_LABEL, FACTORY_MESSAGE_KIND_META } from "@/lib/constants";
+import { PRODUCTION_STAGE_LABEL, FACTORY_MESSAGE_KIND_META, PRIORITY_BANNER, PRIORITY_LABEL, PRIORITY_COLOR } from "@/lib/constants";
 import { replyToFactory, markFactoryMessagesRead } from "@/app/(admin)/jobs/factory-message-actions";
-import type { FactoryMessage, JobItem } from "@/lib/types/database";
+import type { FactoryMessage, JobItem, PriorityLevel } from "@/lib/types/database";
 
 type Props = {
   jobId: string;
   jobCode: string;
   jobLabel?: string | null;
   productType?: string | null;
+  priority?: PriorityLevel;
   dueDate?: string | null;
   customerName?: string | null;
   customerPhone?: string | null;
@@ -34,6 +35,7 @@ export function FactoryCommunication({
   jobCode,
   jobLabel,
   productType,
+  priority = "normal",
   dueDate,
   customerName,
   customerPhone,
@@ -74,13 +76,22 @@ export function FactoryCommunication({
     const lines: (string | null)[] = [
       `🏭 ใบสั่งงาน — ${shopName ?? "SportShop"}`,
       "━━━━━━━━━━━━━━━━━━",
-      `📋 งาน: ${jobCode}`,
-      jobLabel ? `📦 ${jobLabel}` : productType ? `📦 ${productType}` : null,
-      "",
     ];
 
+    // Priority banner — เด่นๆ บนสุด (เฉพาะ urgent/rush ทำกรอบเด่น)
+    if (priority === "rush" || priority === "urgent") {
+      lines.push("");
+      lines.push(PRIORITY_BANNER[priority]);
+      lines.push("");
+    }
+
+    lines.push(`📋 งาน: ${jobCode}`);
+    lines.push(jobLabel ? `📦 ${jobLabel}` : productType ? `📦 ${productType}` : null);
+    lines.push("");
+
     if (dueDate) {
-      lines.push(`📅 ลูกค้าต้องการใช้: ${formatThaiFullDate(dueDate)}`);
+      const urgentMark = priority === "rush" ? " ‼️" : priority === "urgent" ? " ❗" : "";
+      lines.push(`📅 ลูกค้าต้องการใช้: ${formatThaiFullDate(dueDate)}${urgentMark}`);
       lines.push("");
     }
 
@@ -170,9 +181,14 @@ export function FactoryCommunication({
     <Card>
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="inline-flex items-center gap-2 text-base">
+          <CardTitle className="inline-flex flex-wrap items-center gap-2 text-base">
             <Factory className="h-4 w-4 text-orange-400" />
             สื่อสารกับโรงงาน — {factoryName}
+            {priority !== "normal" && (
+              <Badge className={PRIORITY_COLOR[priority]}>
+                {priority === "rush" ? "🚨 " : "⚠️ "}{PRIORITY_LABEL[priority]}
+              </Badge>
+            )}
             {unreadFromFactory > 0 && (
               <Badge className="bg-rose-500/20 text-rose-300">{unreadFromFactory} ข้อความใหม่</Badge>
             )}
