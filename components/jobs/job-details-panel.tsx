@@ -24,6 +24,7 @@ type EditInput = {
   factory_id: string;
   note: string;
   job_label: string;
+  delivery_address: string;
 };
 
 const PRIORITIES: PriorityLevel[] = ["normal", "urgent", "rush"];
@@ -45,6 +46,7 @@ export function JobDetailsPanel({ job, factories }: { job: Job; factories: { id:
       factory_id: job.factory_id ?? "",
       note: job.note ?? "",
       job_label: job.job_label ?? "",
+      delivery_address: job.delivery_address ?? "",
     },
   });
   const factoryId = watch("factory_id");
@@ -112,6 +114,20 @@ export function JobDetailsPanel({ job, factories }: { job: Job; factories: { id:
       <input type="hidden" {...register("cost")} value={Number(job.cost)} />
       <input type="hidden" {...register("shipping_cost")} value={Number(job.shipping_cost)} />
       <input type="hidden" {...register("other_cost")} value={Number(job.other_cost)} />
+
+      <Card>
+        <CardHeader><CardTitle>ที่อยู่จัดส่ง</CardTitle></CardHeader>
+        <CardContent className="space-y-1.5">
+          <Textarea
+            {...register("delivery_address")}
+            rows={3}
+            placeholder="เช่น โรงเรียน... บ้านเลขที่ 57 หมู่ 1 ต.นับทึบ อ.วังน้อย จ.พระนครศรีอยุธยา 13170"
+          />
+          <p className="text-xs text-muted-foreground">
+            💡 ที่อยู่นี้จะแสดงในข้อความแจ้งโรงงาน (ปุ่ม &quot;ส่งใบสั่งงาน&quot; ใน tab โรงงาน)
+          </p>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader><CardTitle>หมายเหตุ</CardTitle></CardHeader>

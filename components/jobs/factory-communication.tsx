@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Factory, Copy, Check, Send, Loader2, MessageCircle, ExternalLink, MessageSquare, ListChecks } from "lucide-react";
-import { cn, formatDateTH } from "@/lib/utils";
+import { Factory, Copy, Check, Send, Loader2, MessageCircle, ExternalLink, MessageSquare, ListChecks, FileText } from "lucide-react";
+import { cn, formatDateTH, formatThaiFullDate } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { PRODUCTION_STAGE_LABEL, FACTORY_MESSAGE_KIND_META } from "@/lib/constants";
 import { replyToFactory, markFactoryMessagesRead } from "@/app/(admin)/jobs/factory-message-actions";
@@ -15,6 +15,13 @@ import type { FactoryMessage, JobItem } from "@/lib/types/database";
 type Props = {
   jobId: string;
   jobCode: string;
+  jobLabel?: string | null;
+  productType?: string | null;
+  dueDate?: string | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  deliveryAddress?: string | null;
+  shopName?: string | null;
   factoryJobId: string;
   factoryName: string;
   portalToken: string;
@@ -22,8 +29,24 @@ type Props = {
   items?: JobItem[];
 };
 
-export function FactoryCommunication({ jobId, jobCode, factoryJobId, factoryName, portalToken, messages, items = [] }: Props) {
+export function FactoryCommunication({
+  jobId,
+  jobCode,
+  jobLabel,
+  productType,
+  dueDate,
+  customerName,
+  customerPhone,
+  deliveryAddress,
+  shopName,
+  factoryJobId,
+  factoryName,
+  portalToken,
+  messages,
+  items = [],
+}: Props) {
   const [copied, setCopied] = useState(false);
+  const [copiedBrief, setCopiedBrief] = useState(false);
   const [reply, setReply] = useState("");
   const [isPending, startTransition] = useTransition();
 
@@ -36,6 +59,59 @@ export function FactoryCommunication({ jobId, jobCode, factoryJobId, factoryName
   const itemProduced = items.filter((it) => it.produced).reduce((s, it) => s + (it.quantity ?? 1), 0);
   const itemPct = itemTotal > 0 ? Math.round((itemProduced / itemTotal) * 100) : 0;
 
+  // สรุปจำนวนตามประเภทสินค้า (สำหรับใบสั่งงาน)
+  const typeSummary = (() => {
+    const m = new Map<string, number>();
+    for (const it of items) {
+      const t = (it.item_type ?? "").trim() || "ไม่ระบุประเภท";
+      m.set(t, (m.get(t) ?? 0) + (it.quantity ?? 1));
+    }
+    return Array.from(m.entries());
+  })();
+
+  // ---------- สร้างข้อความใบสั่งงานครบ ----------
+  function buildBriefMessage(): string {
+    const lines: (string | null)[] = [
+      `🏭 ใบสั่งงาน — ${shopName ?? "SportShop"}`,
+      "━━━━━━━━━━━━━━━━━━",
+      `📋 งาน: ${jobCode}`,
+      jobLabel ? `📦 ${jobLabel}` : productType ? `📦 ${productType}` : null,
+      "",
+    ];
+
+    if (dueDate) {
+      lines.push(`📅 ลูกค้าต้องการใช้: ${formatThaiFullDate(dueDate)}`);
+      lines.push("");
+    }
+
+    if (itemTotal > 0) {
+      lines.push(`👕 จำนวนผลิต: ${itemTotal} ตัว`);
+      if (typeSummary.length > 1) {
+        for (const [type, count] of typeSummary) {
+          lines.push(`   • ${type}: ${count} ตัว`);
+        }
+      }
+      lines.push("");
+    }
+
+    if (customerName) {
+      lines.push(`👤 ลูกค้า: ${customerName}${customerPhone ? ` (${customerPhone})` : ""}`);
+    }
+    if (deliveryAddress?.trim()) {
+      lines.push(`📍 ที่อยู่จัดส่ง:`);
+      lines.push(deliveryAddress.trim());
+    }
+
+    lines.push("");
+    lines.push("━━━━━━━━━━━━━━━━━━");
+    lines.push("🔗 รายละเอียดงาน + รายชื่อ/ไซส์ + ใบงาน + แบบเสื้อ:");
+    lines.push(portalUrl);
+    lines.push("");
+    lines.push("👆 คลิกลิงก์เพื่อดูรายละเอียดครบ + อัพเดทสถานะ + แจ้งปัญหากลับมาได้เลยครับ");
+
+    return lines.filter((l) => l !== null).join("\n");
+  }
+
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(portalUrl);
@@ -47,9 +123,19 @@ export function FactoryCommunication({ jobId, jobCode, factoryJobId, factoryName
     }
   }
 
-  function shareLINE() {
-    const text = `📦 งาน ${jobCode}\nคลิกลิงก์เพื่ออัพเดทสถานะการผลิต + ส่งข้อความถึงร้านได้เลย:\n${portalUrl}`;
-    const url = `https://line.me/R/share?text=${encodeURIComponent(text)}`;
+  async function copyBrief() {
+    try {
+      await navigator.clipboard.writeText(buildBriefMessage());
+      setCopiedBrief(true);
+      toast({ title: "Copy ใบสั่งงานแล้ว — paste ใน LINE ได้เลย ✅" });
+      setTimeout(() => setCopiedBrief(false), 2000);
+    } catch {
+      toast({ title: "Copy ไม่สำเร็จ", variant: "destructive" });
+    }
+  }
+
+  function shareBriefLINE() {
+    const url = `https://line.me/R/share?text=${encodeURIComponent(buildBriefMessage())}`;
     window.open(url, "_blank");
   }
 
@@ -114,34 +200,54 @@ export function FactoryCommunication({ jobId, jobCode, factoryJobId, factoryName
           </div>
         )}
 
-        {/* Portal link */}
-        <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-3">
-          <div className="mb-2 text-xs font-semibold text-orange-300">🔗 ลิงก์สำหรับโรงงาน (ส่งให้โรงงานเปิด)</div>
-          <div className="space-y-2">
+        {/* ใบสั่งงาน — ส่งข้อความครบให้โรงงานทีเดียว */}
+        <div className="rounded-lg border-2 border-orange-500/40 bg-orange-500/5 p-3">
+          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-orange-300">
+            <FileText className="h-4 w-4" /> ส่งใบสั่งงานให้โรงงาน
+          </div>
+
+          {/* Preview ข้อความ */}
+          <pre className="mb-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-card/60 p-2.5 font-sans text-[11px] leading-relaxed text-foreground/90">
+            {buildBriefMessage()}
+          </pre>
+
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={shareBriefLINE} className="flex-1 bg-[#06C755] text-white hover:bg-[#05a647]">
+              <MessageCircle className="h-3.5 w-3.5" /> ส่งทาง LINE
+            </Button>
+            <Button size="sm" onClick={copyBrief} variant="outline" className="flex-1">
+              {copiedBrief ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+              {copiedBrief ? "Copy แล้ว!" : "Copy ข้อความ"}
+            </Button>
+          </div>
+
+          {(!dueDate || !deliveryAddress?.trim()) && (
+            <p className="mt-2 rounded border border-amber-500/30 bg-amber-500/10 p-2 text-[11px] text-amber-200">
+              💡 ใส่{!dueDate ? " กำหนดส่ง" : ""}{!dueDate && !deliveryAddress?.trim() ? " และ" : ""}
+              {!deliveryAddress?.trim() ? " ที่อยู่จัดส่ง" : ""} ใน tab &quot;รายละเอียด&quot; เพื่อให้ข้อความครบขึ้น
+            </p>
+          )}
+        </div>
+
+        {/* Portal link (compact) */}
+        <div className="rounded-lg border border-border bg-card/40 p-3">
+          <div className="mb-2 text-xs font-semibold text-muted-foreground">🔗 ลิงก์โรงงาน (ถ้าอยากส่งแค่ลิงก์)</div>
+          <div className="flex flex-wrap items-center gap-2">
             <Input
               value={portalUrl}
               readOnly
               onClick={(e) => (e.currentTarget as HTMLInputElement).select()}
-              className="font-mono text-xs"
+              className="flex-1 font-mono text-xs"
             />
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" onClick={copyLink} variant="outline" className="flex-1">
-                {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                {copied ? "Copy แล้ว!" : "Copy ลิงก์"}
-              </Button>
-              <Button size="sm" onClick={shareLINE} className="flex-1 bg-[#06C755] text-white hover:bg-[#05a647]">
-                <MessageCircle className="h-3.5 w-3.5" /> ส่งทาง LINE
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <a href={portalUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-3.5 w-3.5" /> เปิดดู
-                </a>
-              </Button>
-            </div>
+            <Button size="sm" onClick={copyLink} variant="outline">
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <a href={portalUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </Button>
           </div>
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            💡 โรงงานคลิกลิงก์เพื่ออัพเดทเปอร์เซ็นต์การผลิต + แจ้งปัญหา/คำถาม — ไม่ต้องสมัครสมาชิก
-          </p>
         </div>
 
         {/* Message thread */}

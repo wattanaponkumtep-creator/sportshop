@@ -193,6 +193,7 @@ export interface Job {
   sew_progress: number;
   ship_progress: number;
   job_label: string | null;
+  delivery_address: string | null;
 }
 
 export interface JobItem {

@@ -24,6 +24,18 @@ export function timeAgo(date: string | Date) {
   return formatDistanceToNow(new Date(date), { addSuffix: true, locale: th });
 }
 
+/** Thai full date with Buddhist era + weekday: "ศุกร์ 12 มิถุนายน 2569" */
+export function formatThaiFullDate(date: string | Date | null | undefined): string {
+  if (!date) return "-";
+  const d = new Date(date);
+  const weekday = formatInTimeZone(d, TZ, "EEEE", { locale: th });
+  const day = formatInTimeZone(d, TZ, "d", { locale: th });
+  const month = formatInTimeZone(d, TZ, "MMMM", { locale: th });
+  const gregorianYear = Number(formatInTimeZone(d, TZ, "yyyy"));
+  const buddhistYear = gregorianYear + 543;
+  return `${weekday} ${day} ${month} ${buddhistYear}`;
+}
+
 export function formatBaht(amount: number | null | undefined) {
   if (amount == null) return "-";
   return new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 }).format(amount);

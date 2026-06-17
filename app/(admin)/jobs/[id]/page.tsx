@@ -221,7 +221,6 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           {(() => {
             const factoryJobsTyped = (factoryJobs ?? []) as FactoryJob[];
             const messagesTyped = (factoryMessages ?? []) as FactoryMessage[];
-            const factoryByJobId = new Map(factoryJobsTyped.map((fj) => [fj.id, fj]));
             const factoriesById = new Map((factories ?? []).map((f) => [f.id, f.name]));
             return factoryJobsTyped
               .filter((fj) => fj.portal_token)
@@ -230,6 +229,13 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                   key={fj.id}
                   jobId={job.id}
                   jobCode={job.job_code}
+                  jobLabel={job.job_label}
+                  productType={job.product_type}
+                  dueDate={job.due_date}
+                  customerName={customer?.name ?? null}
+                  customerPhone={customer?.phone ?? null}
+                  deliveryAddress={job.delivery_address}
+                  shopName={shopInfo?.shop_name ?? null}
                   factoryJobId={fj.id}
                   factoryName={factoriesById.get(fj.factory_id) ?? "โรงงาน"}
                   portalToken={fj.portal_token as string}
