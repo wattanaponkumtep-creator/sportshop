@@ -18,6 +18,7 @@ type Props = {
   jobLabel?: string | null;
   productType?: string | null;
   priority?: PriorityLevel;
+  productionOptions?: string[];
   dueDate?: string | null;
   customerName?: string | null;
   customerPhone?: string | null;
@@ -36,6 +37,7 @@ export function FactoryCommunication({
   jobLabel,
   productType,
   priority = "normal",
+  productionOptions = [],
   dueDate,
   customerName,
   customerPhone,
@@ -101,6 +103,14 @@ export function FactoryCommunication({
         for (const [type, count] of typeSummary) {
           lines.push(`   • ${type}: ${count} ตัว`);
         }
+      }
+      lines.push("");
+    }
+
+    if (productionOptions.length > 0) {
+      lines.push("🧵 ออปชั่นการผลิต:");
+      for (const opt of productionOptions) {
+        lines.push(`   ✔️ ${opt}`);
       }
       lines.push("");
     }

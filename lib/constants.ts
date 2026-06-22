@@ -224,6 +224,30 @@ export const ITEM_TYPE_PRESETS = [
   "อื่นๆ",
 ] as const;
 
+// ---------- Production Options / Add-ons (สั่งโรงงาน) ----------
+// จัดกลุ่มให้เลือกง่าย — เลือกหลายอย่าง + พิมพ์เพิ่มเองได้
+export const PRODUCTION_OPTION_GROUPS = [
+  {
+    group: "ปกเสื้อ",
+    options: ["ปกธรรมดา (ซับลิเมชั่น)", "ปกทอ", "ปกสำเร็จรูป", "ปกลูกฟูก", "ปกถัก"],
+  },
+  {
+    group: "ปลายแขน",
+    options: ["ต่อปลายแขนธรรมดา", "ต่อปลายแขนลูกฟูก", "ต่อปลายแขนทอ"],
+  },
+  {
+    group: "โลโก้ / ตรา",
+    options: ["โลโก้ปัก", "โลโก้ 3D (ยาง/ซิลิโคน)", "โลโก้รีด (Heat Transfer)", "เลขปัก", "ชื่อปัก"],
+  },
+  {
+    group: "อื่นๆ",
+    options: ["กระเป๋า", "ซิป", "ผ้าตาข่ายใต้วงแขน", "สกรีนสปอนเซอร์"],
+  },
+] as const;
+
+// แบนรวมทุก option (ใช้ใน datalist autocomplete)
+export const PRODUCTION_OPTION_PRESETS = PRODUCTION_OPTION_GROUPS.flatMap((g) => g.options);
+
 // ---------- Factory Portal ----------
 export const PRODUCTION_STAGE_LABEL: Record<string, string> = {
   layout: "เลย์เอ้าท์/ดีไซน์",

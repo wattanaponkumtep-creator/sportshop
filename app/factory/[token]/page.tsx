@@ -51,6 +51,8 @@ type PortalPayload = {
   factory_note: string | null;
   sent_at: string | null;
   returned_at: string | null;
+  delivery_address: string | null;
+  production_options: string[];
   layout_progress: number;
   print_progress: number;
   sew_progress: number;
@@ -172,12 +174,35 @@ export default async function FactoryPortalPage({ params }: { params: Promise<{ 
               )}
             </div>
 
+            {/* Production options — เด่นๆ ให้โรงงานเห็น */}
+            {portal.production_options && portal.production_options.length > 0 && (
+              <div className="rounded-md border border-orange-500/40 bg-orange-500/5 p-3">
+                <div className="mb-2 inline-flex items-center gap-1 text-xs font-semibold text-orange-300">
+                  🧵 ออปชั่นการผลิต (สำคัญ!)
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {portal.production_options.map((opt) => (
+                    <Badge key={opt} className="bg-orange-500/20 text-orange-200">✔️ {opt}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {portal.note && (
               <div className="rounded-md border border-border bg-muted/30 p-3 text-sm">
                 <div className="mb-1 inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground">
                   <FileText className="h-3 w-3" /> หมายเหตุจากร้าน
                 </div>
                 <div className="whitespace-pre-wrap">{portal.note}</div>
+              </div>
+            )}
+
+            {portal.delivery_address && (
+              <div className="rounded-md border border-border bg-muted/30 p-3 text-sm">
+                <div className="mb-1 inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground">
+                  📍 ที่อยู่จัดส่ง
+                </div>
+                <div className="whitespace-pre-wrap">{portal.delivery_address}</div>
               </div>
             )}
 

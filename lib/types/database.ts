@@ -194,6 +194,7 @@ export interface Job {
   ship_progress: number;
   job_label: string | null;
   delivery_address: string | null;
+  production_options: string[];
 }
 
 export interface JobItem {

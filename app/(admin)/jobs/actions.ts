@@ -98,6 +98,7 @@ const editJobSchema = z.object({
   factory_id: z.string().uuid().nullable().optional(),
   note: z.string().trim().nullable().optional(),
   delivery_address: z.string().trim().nullable().optional(),
+  production_options: z.array(z.string()).optional(),
 });
 
 export async function updateJob(jobId: string, input: z.input<typeof editJobSchema>) {
@@ -118,6 +119,7 @@ export async function updateJob(jobId: string, input: z.input<typeof editJobSche
     factory_id: parsed.data.factory_id || null,
     note: parsed.data.note || null,
     delivery_address: parsed.data.delivery_address || null,
+    production_options: parsed.data.production_options ?? [],
   }).eq("id", jobId);
 
   if (error) return { ok: false as const, error: error.message };
