@@ -21,10 +21,31 @@ export function getMonthBoundsBangkok(monthsAgo = 0) {
   };
 }
 
-function getYearStartBangkok(): string {
+export function getYearStartBangkok(): string {
   const now = toBangkok(new Date());
   const start = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
   return new Date(start.getTime() - TZ_OFFSET_MS).toISOString();
+}
+
+export type FinanceRange = "this_month" | "3_months" | "ytd" | "all";
+
+export function resolveRange(range: FinanceRange): { start: string; end: string; label: string } {
+  const end = new Date().toISOString();
+  switch (range) {
+    case "this_month": {
+      const m = getMonthBoundsBangkok(0);
+      return { start: m.start, end: m.end, label: "เดือนนี้" };
+    }
+    case "3_months": {
+      const start = getMonthBoundsBangkok(2).start;
+      return { start, end, label: "3 เดือนล่าสุด" };
+    }
+    case "ytd":
+      return { start: getYearStartBangkok(), end, label: "ตั้งแต่ต้นปี" };
+    case "all":
+    default:
+      return { start: "1970-01-01T00:00:00Z", end, label: "ทั้งหมด" };
+  }
 }
 
 export type ReportJob = Pick<

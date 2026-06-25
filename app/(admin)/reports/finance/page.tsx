@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
   TrendingUp,
-  TrendingDown,
   HandCoins,
   Receipt,
   Wallet,
@@ -12,115 +11,207 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   PiggyBank,
+  FileClock,
+  PieChart,
+  Sparkles,
+  Palette,
+  Truck,
 } from "lucide-react";
 import { getFinanceData } from "@/lib/reports/finance";
-import { pctChange, formatPct } from "@/lib/reports/queries";
+import { pctChange, formatPct, type FinanceRange } from "@/lib/reports/queries";
 import { formatBaht, cn } from "@/lib/utils";
 import { TrendChart } from "@/components/reports/trend-chart";
+import { DonutChart } from "@/components/reports/donut-chart";
+import { FinanceRangeTabs } from "@/components/reports/finance-range-tabs";
 import { ExpenseManager } from "@/components/reports/expense-manager";
 import { EXPENSE_CATEGORY_LABEL, EXPENSE_CATEGORY_EMOJI } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
-export default async function FinanceReportPage() {
-  const data = await getFinanceData();
-  const { thisMonth, lastMonth, totals } = data;
+// สีสำหรับ donut
+const EXPENSE_COLORS: Record<string, string> = {
+  factory: "#fb923c", material: "#22d3ee", shipping: "#60a5fa", rent: "#a78bfa",
+  salary: "#34d399", marketing: "#f472b6", utility: "#fbbf24", equipment: "#94a3b8", other: "#64748b",
+};
+const INCOME_PALETTE = ["#f97316", "#06b6d4", "#22c55e", "#a855f7", "#ec4899", "#eab308", "#3b82f6", "#64748b"];
 
-  const cashInChange = pctChange(thisMonth.cashIn, lastMonth.cashIn);
-  const cashOutChange = pctChange(thisMonth.cashOut, lastMonth.cashOut);
-  const grossMargin = thisMonth.revenue > 0 ? (thisMonth.grossProfit / thisMonth.revenue) * 100 : 0;
-  const totalExpenseSum = data.expenseByCategory.reduce((s, c) => s + c.amount, 0);
+export default async function FinanceReportPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string }>;
+}) {
+  const { range: rangeParam } = await searchParams;
+  const range = (["this_month", "3_months", "ytd", "all"].includes(rangeParam ?? "")
+    ? rangeParam
+    : "this_month") as FinanceRange;
+
+  const data = await getFinanceData(range);
+  const s = data.summary;
+
+  // For this_month, compute MoM change vs last month
+  const showMoM = range === "this_month";
+  const cashInChange = showMoM ? pctChange(data.monthly[5].cashIn, data.monthly[4].cashIn) : 0;
+  const cashOutChange = showMoM ? pctChange(data.monthly[5].cashOut, data.monthly[4].cashOut) : 0;
+
+  const expenseSlices = data.expenseByCategory.map((c) => ({
+    label: EXPENSE_CATEGORY_LABEL[c.category] ?? c.category,
+    value: c.amount,
+    color: EXPENSE_COLORS[c.category] ?? "#64748b",
+  }));
+  const incomeSlices = data.incomeByType.map((c, i) => ({
+    label: c.type,
+    value: c.amount,
+    color: INCOME_PALETTE[i % INCOME_PALETTE.length],
+  }));
 
   return (
     <div className="container space-y-6 p-3 sm:space-y-8 sm:p-4 md:p-8">
-      <header>
+      <header className="space-y-3">
         <Link href="/reports" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> รายงานภาพรวม
         </Link>
-        <h1 className="mt-2 flex items-center gap-2 text-2xl font-bold tracking-tight md:text-3xl">
-          <Wallet className="h-7 w-7 text-emerald-400" /> รายงานการเงิน
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          เงินเข้า · เงินออก · กำไรขาดทุน — ข้อมูล 6 เดือนล่าสุด
-        </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight md:text-3xl">
+              <Wallet className="h-7 w-7 text-emerald-400" /> รายงานการเงิน
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              เงินเข้า · เงินออก · กำไรขาดทุน — <span className="font-medium text-foreground">{data.rangeLabel}</span>
+            </p>
+          </div>
+          <FinanceRangeTabs current={range} />
+        </div>
       </header>
 
-      {/* ============ 1. กระแสเงินสดเดือนนี้ ============ */}
+      {/* ============ 1. เอกสารรอดำเนินการ ============ */}
       <section className="space-y-3">
-        <div>
-          <h2 className="font-display text-lg font-bold sm:text-xl">💰 กระแสเงินสดเดือนนี้ (Cash Flow)</h2>
-          <p className="text-xs text-muted-foreground">เงินที่เข้า-ออกจริง จากการรับเงิน + บันทึกค่าใช้จ่าย</p>
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <BigCard
-            label="เงินเข้า"
-            value={formatBaht(thisMonth.cashIn)}
-            sub={`${formatPct(cashInChange)} เทียบเดือนก่อน`}
-            subPositive={cashInChange >= 0}
-            icon={ArrowDownToLine}
-            tone="emerald"
+        <h2 className="font-display text-lg font-bold sm:text-xl">📑 รอดำเนินการ</h2>
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+          <PendingCard
+            href="/inquiries"
+            icon={Sparkles}
+            tone="text-amber-400"
+            label="ใบขอราคาใหม่"
+            value={`${data.pending.inquiries} ราย`}
           />
-          <BigCard
-            label="เงินออก"
-            value={formatBaht(thisMonth.cashOut)}
-            sub={`${formatPct(cashOutChange)} เทียบเดือนก่อน`}
-            subPositive={cashOutChange <= 0}
-            icon={ArrowUpFromLine}
-            tone="rose"
+          <PendingCard
+            href="/jobs?status=awaiting_approval"
+            icon={Palette}
+            tone="text-purple-400"
+            label="รออนุมัติแบบ"
+            value={`${data.pending.awaitingApproval} งาน`}
           />
-          <BigCard
-            label="กระแสเงินสดสุทธิ"
-            value={formatBaht(thisMonth.netCash)}
-            sub={thisMonth.netCash >= 0 ? "เงินสดเพิ่มขึ้น 📈" : "เงินสดลดลง 📉"}
-            subPositive={thisMonth.netCash >= 0}
-            icon={Scale}
-            tone={thisMonth.netCash >= 0 ? "emerald" : "rose"}
-            highlight
+          <PendingCard
+            href="/jobs?status=ready_to_ship"
+            icon={Truck}
+            tone="text-cyan-400"
+            label="รอจัดส่ง"
+            value={`${data.pending.readyToShip} งาน`}
+          />
+          <PendingCard
+            href="/jobs"
+            icon={FileClock}
+            tone="text-rose-400"
+            label="รอเก็บเงิน"
+            value={`${data.pending.unpaidCount} งาน`}
+            sub={formatBaht(data.pending.unpaidAmount)}
           />
         </div>
       </section>
 
-      {/* ============ 2. กำไรขาดทุน (P&L) เดือนนี้ ============ */}
+      {/* ============ 2. กระแสเงินสด ============ */}
       <section className="space-y-3">
         <div>
-          <h2 className="font-display text-lg font-bold sm:text-xl">📊 กำไรขาดทุนเดือนนี้ (P&amp;L)</h2>
-          <p className="text-xs text-muted-foreground">คำนวณจากงานที่ปิด (ส่ง/เสร็จ) ในเดือนนี้</p>
+          <h2 className="font-display text-lg font-bold sm:text-xl">💰 กระแสเงินสด (Cash Flow)</h2>
+          <p className="text-xs text-muted-foreground">เงินเข้า-ออกจริง — {data.rangeLabel}</p>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <BigCard
+            label="เงินเข้า" value={formatBaht(s.cashIn)}
+            sub={showMoM ? `${formatPct(cashInChange)} เทียบเดือนก่อน` : undefined}
+            subPositive={cashInChange >= 0} icon={ArrowDownToLine} tone="emerald"
+          />
+          <BigCard
+            label="เงินออก" value={formatBaht(s.cashOut)}
+            sub={showMoM ? `${formatPct(cashOutChange)} เทียบเดือนก่อน` : undefined}
+            subPositive={cashOutChange <= 0} icon={ArrowUpFromLine} tone="rose"
+          />
+          <BigCard
+            label="กระแสเงินสดสุทธิ" value={formatBaht(s.netCash)}
+            sub={s.netCash >= 0 ? "เงินสดเพิ่มขึ้น 📈" : "เงินสดลดลง 📉"}
+            subPositive={s.netCash >= 0} icon={Scale}
+            tone={s.netCash >= 0 ? "emerald" : "rose"} highlight
+          />
+        </div>
+      </section>
+
+      {/* ============ 3. กำไรขาดทุน (P&L) ============ */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="font-display text-lg font-bold sm:text-xl">📊 กำไรขาดทุน (P&amp;L)</h2>
+          <p className="text-xs text-muted-foreground">รายได้ − ต้นทุนงาน − ค่าใช้จ่ายร้าน = กำไรสุทธิ</p>
         </div>
         <Card>
           <CardContent className="p-4 sm:p-6">
-            <div className="mx-auto max-w-md space-y-2.5">
-              <PnlRow label="รายได้ (ยอดขายสุทธิ)" value={thisMonth.revenue} tone="text-emerald-400" sign="+" />
-              <PnlRow label="ต้นทุนขาย (ผ้า+ผลิต+ส่ง+อื่น)" value={thisMonth.cogs} tone="text-rose-400" sign="−" />
+            <div className="mx-auto max-w-lg space-y-2.5">
+              <PnlRow label="รายได้ (ยอดขายสุทธิ)" value={s.revenue} tone="text-emerald-400" sign="+" />
+              <PnlRow label="ต้นทุนงาน (ผ้า+ผลิต+ส่ง+อื่น)" value={s.cogs} tone="text-rose-400" sign="−" />
               <div className="border-t border-border pt-2.5">
-                <PnlRow
-                  label="กำไรขั้นต้น (Gross Profit)"
-                  value={thisMonth.grossProfit}
-                  tone={thisMonth.grossProfit >= 0 ? "text-emerald-400" : "text-rose-400"}
-                  bold
-                />
+                <PnlRow label="กำไรขั้นต้น (Gross Profit)" value={s.grossProfit}
+                  tone={s.grossProfit >= 0 ? "text-emerald-400" : "text-rose-400"} bold />
+                <div className="mt-1 text-right text-xs text-muted-foreground">
+                  Margin {s.grossMargin.toFixed(1)}%
+                </div>
               </div>
-              <div className="mt-2 flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-sm">
-                <span className="text-muted-foreground">อัตรากำไรขั้นต้น (Margin)</span>
-                <Badge
-                  className={cn(
-                    grossMargin >= 30 ? "bg-emerald-500/20 text-emerald-300"
-                    : grossMargin >= 15 ? "bg-amber-500/20 text-amber-300"
-                    : "bg-rose-500/20 text-rose-300",
-                  )}
-                >
-                  {grossMargin.toFixed(1)}%
-                </Badge>
+              <PnlRow label="ค่าใช้จ่ายร้าน (เช่า/เงินเดือน/การตลาด ฯลฯ)" value={s.operatingExpenses} tone="text-rose-400" sign="−" />
+              <div className="mt-1 rounded-lg border-2 border-emerald-500/30 bg-emerald-500/5 p-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-display text-base font-bold">กำไรสุทธิ (Net Profit)</span>
+                  <span className={cn("font-display text-xl font-bold tabular-nums sm:text-2xl",
+                    s.netProfit >= 0 ? "text-emerald-400" : "text-rose-400")}>
+                    {s.netProfit < 0 ? "-" : ""}{formatBaht(Math.abs(s.netProfit))}
+                  </span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{s.netProfit >= 0 ? "✅ มีกำไร" : "⚠️ ขาดทุน"}</span>
+                  <span>Net Margin {s.netMargin.toFixed(1)}%</span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
       </section>
 
-      {/* ============ 3. แนวโน้ม 6 เดือน ============ */}
+      {/* ============ 4. Donut charts ============ */}
       <section className="space-y-3">
-        <div>
-          <h2 className="font-display text-lg font-bold sm:text-xl">📈 แนวโน้ม 6 เดือน</h2>
+        <h2 className="font-display text-lg font-bold sm:text-xl">🍩 สัดส่วนรายรับ-รายจ่าย</h2>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="inline-flex items-center gap-2 text-base">
+                <PieChart className="h-4 w-4 text-emerald-400" /> รายรับแยกตามประเภท
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DonutChart slices={incomeSlices} centerLabel="รายรับ" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="inline-flex items-center gap-2 text-base">
+                <PieChart className="h-4 w-4 text-rose-400" /> รายจ่ายแยกตามหมวด
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DonutChart slices={expenseSlices} centerLabel="รายจ่าย" />
+            </CardContent>
+          </Card>
         </div>
+      </section>
+
+      {/* ============ 5. แนวโน้ม 6 เดือน ============ */}
+      <section className="space-y-3">
+        <h2 className="font-display text-lg font-bold sm:text-xl">📈 แนวโน้ม 6 เดือน</h2>
         <div className="grid gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader>
@@ -132,25 +223,12 @@ export default async function FinanceReportPage() {
               <TrendChart
                 labels={data.monthly.map((m) => m.label)}
                 series={[
-                  {
-                    key: "in",
-                    label: "เงินเข้า",
-                    color: "bg-emerald-500",
-                    textColor: "text-emerald-400",
-                    values: data.monthly.map((m) => m.cashIn),
-                  },
-                  {
-                    key: "out",
-                    label: "เงินออก",
-                    color: "bg-rose-500",
-                    textColor: "text-rose-400",
-                    values: data.monthly.map((m) => m.cashOut),
-                  },
+                  { key: "in", label: "เงินเข้า", color: "bg-emerald-500", textColor: "text-emerald-400", values: data.monthly.map((m) => m.cashIn) },
+                  { key: "out", label: "เงินออก", color: "bg-rose-500", textColor: "text-rose-400", values: data.monthly.map((m) => m.cashOut) },
                 ]}
               />
             </CardContent>
           </Card>
-
           <Card>
             <CardHeader>
               <CardTitle className="inline-flex items-center gap-2 text-base">
@@ -161,27 +239,9 @@ export default async function FinanceReportPage() {
               <TrendChart
                 labels={data.monthly.map((m) => m.label)}
                 series={[
-                  {
-                    key: "rev",
-                    label: "รายได้",
-                    color: "bg-orange-500",
-                    textColor: "text-orange-400",
-                    values: data.monthly.map((m) => m.revenue),
-                  },
-                  {
-                    key: "cogs",
-                    label: "ต้นทุน",
-                    color: "bg-rose-500",
-                    textColor: "text-rose-400",
-                    values: data.monthly.map((m) => m.cogs),
-                  },
-                  {
-                    key: "gp",
-                    label: "กำไร",
-                    color: "bg-emerald-500",
-                    textColor: "text-emerald-400",
-                    values: data.monthly.map((m) => m.grossProfit),
-                  },
+                  { key: "rev", label: "รายได้", color: "bg-orange-500", textColor: "text-orange-400", values: data.monthly.map((m) => m.revenue) },
+                  { key: "cogs", label: "ต้นทุน", color: "bg-rose-500", textColor: "text-rose-400", values: data.monthly.map((m) => m.cogs) },
+                  { key: "gp", label: "กำไร", color: "bg-emerald-500", textColor: "text-emerald-400", values: data.monthly.map((m) => m.grossProfit) },
                 ]}
               />
             </CardContent>
@@ -189,84 +249,12 @@ export default async function FinanceReportPage() {
         </div>
       </section>
 
-      {/* ============ 4. สรุป 6 เดือน + ค่าใช้จ่ายแยกหมวด ============ */}
-      <section className="space-y-3">
-        <div>
-          <h2 className="font-display text-lg font-bold sm:text-xl">🧾 สรุป 6 เดือน</h2>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-2">
-          {/* 6-month totals */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">ยอดรวม 6 เดือน</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2.5">
-              <PnlRow label="เงินเข้ารวม" value={totals.cashIn} tone="text-emerald-400" sign="+" />
-              <PnlRow label="เงินออกรวม" value={totals.cashOut} tone="text-rose-400" sign="−" />
-              <div className="border-t border-border pt-2.5">
-                <PnlRow
-                  label="กระแสเงินสดสุทธิรวม"
-                  value={totals.netCash}
-                  tone={totals.netCash >= 0 ? "text-emerald-400" : "text-rose-400"}
-                  bold
-                />
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border pt-3 text-center">
-                <div>
-                  <div className="text-[10px] text-muted-foreground">รายได้รวม (P&amp;L)</div>
-                  <div className="font-mono text-sm font-bold">{formatBaht(totals.revenue)}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-muted-foreground">กำไรขั้นต้นรวม</div>
-                  <div className={cn("font-mono text-sm font-bold", totals.grossProfit >= 0 ? "text-emerald-400" : "text-rose-400")}>
-                    {formatBaht(totals.grossProfit)}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Expense by category */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="inline-flex items-center gap-2 text-base">
-                <Receipt className="h-4 w-4 text-rose-400" /> เงินออกแยกหมวด (6 เดือน)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {data.expenseByCategory.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">
-                  ยังไม่มีบันทึกค่าใช้จ่าย — เพิ่มด้านล่าง
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {data.expenseByCategory.map((c) => {
-                    const pct = totalExpenseSum > 0 ? (c.amount / totalExpenseSum) * 100 : 0;
-                    return (
-                      <div key={c.category}>
-                        <div className="mb-1 flex items-center justify-between text-sm">
-                          <span>{EXPENSE_CATEGORY_EMOJI[c.category]} {EXPENSE_CATEGORY_LABEL[c.category]}</span>
-                          <span className="font-mono">{formatBaht(c.amount)} <span className="text-xs text-muted-foreground">({pct.toFixed(0)}%)</span></span>
-                        </div>
-                        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                          <div className="h-full bg-rose-500" style={{ width: `${pct}%` }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* ============ 5. บันทึกเงินออก ============ */}
+      {/* ============ 6. บันทึกเงินออก ============ */}
       <section className="space-y-3">
         <div>
           <h2 className="font-display text-lg font-bold sm:text-xl">✍️ บันทึกเงินออก</h2>
           <p className="text-xs text-muted-foreground">
-            บันทึกทุกครั้งที่จ่ายเงิน (จ่ายโรงงาน, ค่าผ้า, ค่าเช่า ฯลฯ) เพื่อให้กระแสเงินสดแม่นยำ
+            บันทึกทุกครั้งที่จ่ายเงิน เพื่อให้กระแสเงินสด + กำไรสุทธิแม่นยำ
           </p>
         </div>
         <ExpenseManager recent={data.recentExpenses} />
@@ -274,20 +262,40 @@ export default async function FinanceReportPage() {
 
       <footer className="flex items-center justify-center gap-2 text-center text-xs text-muted-foreground">
         <PiggyBank className="h-4 w-4" />
-        💡 ยิ่งบันทึกเงินออกครบ กระแสเงินสด + กำไรขาดทุนยิ่งแม่นยำ
+        💡 หมวด &quot;จ่ายโรงงาน/ค่าผ้า/ค่าขนส่ง&quot; ถือเป็นต้นทุนงาน — ส่วนอื่นเป็นค่าใช้จ่ายร้าน (หักจากกำไรสุทธิ)
       </footer>
     </div>
   );
 }
 
+function PendingCard({
+  href, icon: Icon, tone, label, value, sub,
+}: {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  tone: string;
+  label: string;
+  value: string;
+  sub?: string;
+}) {
+  return (
+    <Link href={href}>
+      <Card className="transition hover:border-primary/50">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] text-muted-foreground sm:text-xs">{label}</span>
+            <Icon className={cn("h-4 w-4", tone)} />
+          </div>
+          <div className="mt-1 text-lg font-bold sm:text-xl">{value}</div>
+          {sub && <div className="text-xs text-rose-400">{sub}</div>}
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
 function BigCard({
-  label,
-  value,
-  sub,
-  subPositive,
-  icon: Icon,
-  tone,
-  highlight,
+  label, value, sub, subPositive, icon: Icon, tone, highlight,
 }: {
   label: string;
   value: string;
@@ -307,9 +315,7 @@ function BigCard({
         </div>
         <div className={cn("mt-1 font-display text-2xl font-bold tabular-nums sm:text-3xl", toneText)}>{value}</div>
         {sub && (
-          <div className={cn("mt-1 text-xs", subPositive === false ? "text-rose-400" : "text-muted-foreground")}>
-            {sub}
-          </div>
+          <div className={cn("mt-1 text-xs", subPositive === false ? "text-rose-400" : "text-muted-foreground")}>{sub}</div>
         )}
       </CardContent>
     </Card>
@@ -317,11 +323,7 @@ function BigCard({
 }
 
 function PnlRow({
-  label,
-  value,
-  tone,
-  sign,
-  bold,
+  label, value, tone, sign, bold,
 }: {
   label: string;
   value: number;
@@ -330,11 +332,10 @@ function PnlRow({
   bold?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between gap-2">
       <span className={cn("text-sm", bold ? "font-semibold" : "text-muted-foreground")}>{label}</span>
-      <span className={cn("font-mono tabular-nums", bold ? "text-lg font-bold" : "text-sm", tone)}>
-        {sign && value !== 0 ? `${sign} ` : ""}
-        {formatBaht(Math.abs(value))}
+      <span className={cn("shrink-0 font-mono tabular-nums", bold ? "text-lg font-bold" : "text-sm", tone)}>
+        {sign && value !== 0 ? `${sign} ` : ""}{formatBaht(Math.abs(value))}
       </span>
     </div>
   );
