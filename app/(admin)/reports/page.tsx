@@ -44,12 +44,20 @@ export default async function ReportsPage() {
   return (
     <div className="container space-y-6 p-3 sm:space-y-8 sm:p-4 md:p-8">
       {/* Header */}
-      <header>
-        <p className="text-xs uppercase tracking-wider text-muted-foreground">วิเคราะห์ธุรกิจ</p>
-        <h1 className="mt-0.5 text-2xl font-bold tracking-tight md:text-3xl">รายงาน / Analytics</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          ภาพรวมยอดขาย กำไร เงินสด และผลการดำเนินงาน — ข้อมูล 6 เดือนล่าสุด
-        </p>
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">วิเคราะห์ธุรกิจ</p>
+          <h1 className="mt-0.5 text-2xl font-bold tracking-tight md:text-3xl">รายงาน / Analytics</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            ภาพรวมยอดขาย กำไร เงินสด และผลการดำเนินงาน — ข้อมูล 6 เดือนล่าสุด
+          </p>
+        </div>
+        <Link
+          href="/reports/finance"
+          className="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-emerald-500 to-cyan-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition hover:shadow-emerald-500/40"
+        >
+          <Wallet className="h-4 w-4" /> รายงานการเงิน (เงินเข้า-ออก)
+        </Link>
       </header>
 
       {/* ============================== */}

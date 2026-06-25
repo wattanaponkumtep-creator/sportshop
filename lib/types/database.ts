@@ -114,6 +114,28 @@ export interface CatalogItem {
   updated_at: string;
 }
 
+export type ExpenseCategory =
+  | "factory"
+  | "material"
+  | "shipping"
+  | "rent"
+  | "salary"
+  | "marketing"
+  | "utility"
+  | "equipment"
+  | "other";
+
+export interface Expense {
+  id: string;
+  category: ExpenseCategory;
+  amount: number;
+  paid_at: string;
+  note: string | null;
+  job_id: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
 export type InquiryStatus = "new" | "contacted" | "quoted" | "converted" | "rejected";
 
 export interface Inquiry {
@@ -413,6 +435,7 @@ export type Database = {
       catalog_categories: TableDef<CatalogCategory>;
       catalog_items: TableDef<CatalogItem>;
       inquiries: TableDef<Inquiry>;
+      expenses: TableDef<Expense>;
       designs: TableDef<Design>;
       customer_comments: TableDef<{ id: string; job_id: string; author_name: string | null; message: string; created_at: string }>;
     };

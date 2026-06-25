@@ -224,6 +224,26 @@ export const ITEM_TYPE_PRESETS = [
   "อื่นๆ",
 ] as const;
 
+// ---------- Expense Categories (เงินออก) ----------
+export const EXPENSE_CATEGORIES = [
+  { value: "factory",   label: "จ่ายโรงงาน",   emoji: "🏭", color: "text-orange-400" },
+  { value: "material",  label: "ค่าวัสดุ/ผ้า",  emoji: "🧵", color: "text-cyan-400" },
+  { value: "shipping",  label: "ค่าขนส่ง",      emoji: "🚚", color: "text-blue-400" },
+  { value: "rent",      label: "ค่าเช่า",       emoji: "🏠", color: "text-purple-400" },
+  { value: "salary",    label: "เงินเดือน/ค่าแรง", emoji: "👥", color: "text-emerald-400" },
+  { value: "marketing", label: "การตลาด/โฆษณา", emoji: "📣", color: "text-pink-400" },
+  { value: "utility",   label: "ค่าน้ำ/ไฟ/เน็ต", emoji: "💡", color: "text-amber-400" },
+  { value: "equipment", label: "อุปกรณ์/เครื่องมือ", emoji: "🛠️", color: "text-slate-400" },
+  { value: "other",     label: "อื่นๆ",         emoji: "📦", color: "text-muted-foreground" },
+] as const;
+
+export const EXPENSE_CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
+  EXPENSE_CATEGORIES.map((c) => [c.value, c.label]),
+);
+export const EXPENSE_CATEGORY_EMOJI: Record<string, string> = Object.fromEntries(
+  EXPENSE_CATEGORIES.map((c) => [c.value, c.emoji]),
+);
+
 // ---------- Production Options / Add-ons (สั่งโรงงาน) ----------
 // จัดกลุ่มให้เลือกง่าย — เลือกหลายอย่าง + พิมพ์เพิ่มเองได้
 export const PRODUCTION_OPTION_GROUPS = [
