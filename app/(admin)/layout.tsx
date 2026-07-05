@@ -1,7 +1,26 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { RealtimeRefresh } from "@/components/admin/realtime-refresh";
 import { getFollowupSuggestions } from "@/lib/suggestions/followup";
+
+// ตารางที่เมื่อเปลี่ยนแปลง → หน้าที่เปิดอยู่จะ refresh เอง (ทุกหน้าใน admin)
+const REALTIME_TABLES = [
+  "jobs",
+  "payments",
+  "expenses",
+  "job_items",
+  "job_timeline",
+  "factory_jobs",
+  "factory_messages",
+  "mockups",
+  "shipments",
+  "customers",
+  "factories",
+  "inquiries",
+  "catalog_items",
+  "designs",
+];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -28,5 +47,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     detail: s.detail,
   }));
 
-  return <AdminShell user={profile} alerts={alerts}>{children}</AdminShell>;
+  return (
+    <AdminShell user={profile} alerts={alerts}>
+      <RealtimeRefresh channelName="admin-live" tables={REALTIME_TABLES} />
+      {children}
+    </AdminShell>
+  );
 }
