@@ -1,5 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,7 @@ export function FactoryCheckins({
   currentFactoryId: string | null;
   checkins: FactoryCheckin[];
 }) {
+  const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [factoryId, setFactoryId] = useState(currentFactoryId ?? "");
   const [status, setStatus] = useState("");
@@ -57,6 +59,7 @@ export function FactoryCheckins({
         setStatus("");
         setNote("");
         setAdding(false);
+        router.refresh();
       } else {
         toast({ title: "บันทึกไม่สำเร็จ", description: result.error, variant: "destructive" });
       }
@@ -67,7 +70,8 @@ export function FactoryCheckins({
     if (!confirm("ลบบันทึก check-in นี้?")) return;
     startTransition(async () => {
       const result = await deleteFactoryCheckin(id, jobId);
-      if (!result.ok) toast({ title: "ลบไม่สำเร็จ", description: result.error, variant: "destructive" });
+      if (result.ok) router.refresh();
+      else toast({ title: "ลบไม่สำเร็จ", description: result.error, variant: "destructive" });
     });
   }
 

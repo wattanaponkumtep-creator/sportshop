@@ -1,5 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import { addExpense, deleteExpense } from "@/app/(admin)/reports/finance/expense
 import type { Expense, ExpenseCategory } from "@/lib/types/database";
 
 export function ExpenseManager({ recent }: { recent: Expense[] }) {
+  const router = useRouter();
   const [category, setCategory] = useState<ExpenseCategory>("factory");
   const [amount, setAmount] = useState("");
   const [paidAt, setPaidAt] = useState(new Date().toISOString().slice(0, 10));
@@ -36,6 +38,7 @@ export function ExpenseManager({ recent }: { recent: Expense[] }) {
         toast({ title: "บันทึกรายจ่ายแล้ว ✅" });
         setAmount("");
         setNote("");
+        router.refresh(); // อัพเดทรายการ + ยอดรวม + donut ทันที (ไม่ reload หน้า)
       } else {
         toast({ title: "บันทึกไม่สำเร็จ", description: res.error, variant: "destructive" });
       }
@@ -46,7 +49,11 @@ export function ExpenseManager({ recent }: { recent: Expense[] }) {
     if (!confirm("ลบรายการนี้?")) return;
     startTransition(async () => {
       const res = await deleteExpense(id);
-      if (!res.ok) toast({ title: "ลบไม่สำเร็จ", description: res.error, variant: "destructive" });
+      if (res.ok) {
+        router.refresh();
+      } else {
+        toast({ title: "ลบไม่สำเร็จ", description: res.error, variant: "destructive" });
+      }
     });
   }
 

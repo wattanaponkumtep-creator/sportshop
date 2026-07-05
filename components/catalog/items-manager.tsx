@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,7 @@ export function CatalogItemsManager({
   items: CatalogItem[];
   thumbnailUrls: Record<string, string>;
 }) {
+  const router = useRouter();
   const [editing, setEditing] = useState<ItemEditor | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -69,15 +71,20 @@ export function CatalogItemsManager({
     if (!confirm(`ลบ "${name}"? (รูปจะถูกลบด้วย)`)) return;
     startTransition(async () => {
       const res = await deleteCatalogItem(id);
-      if (res.ok) toast({ title: "ลบแล้ว" });
-      else toast({ title: "ลบไม่สำเร็จ", description: res.error, variant: "destructive" });
+      if (res.ok) {
+        toast({ title: "ลบแล้ว" });
+        router.refresh();
+      } else {
+        toast({ title: "ลบไม่สำเร็จ", description: res.error, variant: "destructive" });
+      }
     });
   }
 
   function handleToggleActive(id: string, current: boolean) {
     startTransition(async () => {
       const res = await toggleItemActive(id, !current);
-      if (!res.ok) toast({ title: "ไม่สำเร็จ", description: res.error, variant: "destructive" });
+      if (res.ok) router.refresh();
+      else toast({ title: "ไม่สำเร็จ", description: res.error, variant: "destructive" });
     });
   }
 
@@ -94,7 +101,10 @@ export function CatalogItemsManager({
           categoryId={categoryId}
           editing={editing}
           onCancel={cancel}
-          onSaved={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            router.refresh();
+          }}
         />
       )}
 

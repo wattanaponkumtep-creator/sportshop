@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +65,7 @@ export function JobPayments({
   otherCost: number;
   payments: Payment[];
 }) {
+  const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [, startTransition] = useTransition();
 
@@ -93,7 +95,10 @@ export function JobPayments({
     startTransition(async () => {
       const result = await deletePayment(id, jobId);
       if (!result.ok) toast({ title: "ลบไม่สำเร็จ", description: result.error, variant: "destructive" });
-      else toast({ title: "ลบแล้ว" });
+      else {
+        toast({ title: "ลบแล้ว" });
+        router.refresh();
+      }
     });
   }
 
@@ -230,6 +235,7 @@ export function JobPayments({
         outstanding={outstanding}
         open={adding}
         onClose={() => setAdding(false)}
+        onSaved={() => router.refresh()}
       />
     </div>
   );
@@ -362,11 +368,13 @@ function AddPaymentDialog({
   outstanding,
   open,
   onClose,
+  onSaved,
 }: {
   jobId: string;
   outstanding: number;
   open: boolean;
   onClose: () => void;
+  onSaved: () => void;
 }) {
   const [type, setType] = useState<PaymentType>(outstanding > 0 ? "deposit" : "full");
   const [amount, setAmount] = useState(outstanding > 0 ? outstanding.toString() : "");
@@ -425,6 +433,7 @@ function AddPaymentDialog({
         toast({ title: "บันทึกการชำระแล้ว" });
         reset();
         onClose();
+        onSaved();
       } else {
         toast({ title: "บันทึกไม่สำเร็จ", description: result.error, variant: "destructive" });
       }
