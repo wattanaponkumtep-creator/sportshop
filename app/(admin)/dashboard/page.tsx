@@ -8,6 +8,7 @@ import { KanbanBoard } from "@/components/jobs/kanban-board";
 import { DailyChecklist } from "@/components/admin/daily-checklist";
 import { DailySchedule } from "@/components/admin/daily-schedule";
 import { FollowupSuggestions } from "@/components/admin/followup-suggestions";
+import { RealtimeRefresh } from "@/components/admin/realtime-refresh";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +62,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="container space-y-4 p-3 sm:space-y-6 sm:p-4 md:p-8">
+      {/* อัพเดทสด — เมื่อมีการเพิ่ม/แก้/ลบ งานหรือการชำระ dashboard จะ refresh เอง */}
+      <RealtimeRefresh channelName="dashboard-live" tables={["jobs", "payments", "job_timeline"]} />
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs uppercase tracking-wider text-muted-foreground">ภาพรวมร้าน</p>
