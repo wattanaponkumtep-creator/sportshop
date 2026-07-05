@@ -41,6 +41,11 @@ export function KanbanBoard({ initialJobs }: { initialJobs: KanbanJob[] }) {
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } })
   );
 
+  // Sync กับข้อมูลใหม่จาก server เมื่อ router.refresh() (การ์ดจึงขยับตามแม้ realtime ไม่ทำงาน)
+  useEffect(() => {
+    setJobs(initialJobs);
+  }, [initialJobs]);
+
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase
