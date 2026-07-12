@@ -232,6 +232,8 @@ export function JobPayments({
 
       <AddPaymentDialog
         jobId={jobId}
+        netAmount={netAmount}
+        paid={paid}
         outstanding={outstanding}
         open={adding}
         onClose={() => setAdding(false)}
@@ -365,12 +367,16 @@ function ProfitCard({
 
 function AddPaymentDialog({
   jobId,
+  netAmount,
+  paid,
   outstanding,
   open,
   onClose,
   onSaved,
 }: {
   jobId: string;
+  netAmount: number;
+  paid: number;
   outstanding: number;
   open: boolean;
   onClose: () => void;
@@ -378,6 +384,19 @@ function AddPaymentDialog({
 }) {
   const [type, setType] = useState<PaymentType>(outstanding > 0 ? "deposit" : "full");
   const [amount, setAmount] = useState(outstanding > 0 ? outstanding.toString() : "");
+
+  // Quick-fill presets
+  function fillDeposit(pct: number) {
+    // มัดจำ = % ของราคาเต็ม (สุทธิ) — ปัดเป็นจำนวนเต็มบาท
+    const value = Math.round((netAmount * pct) / 100);
+    setType("deposit");
+    setAmount(value.toString());
+  }
+  function fillFull() {
+    // ชำระเต็ม = จ่ายส่วนที่ค้างทั้งหมด
+    setType(paid > 0 ? "full" : "full");
+    setAmount(Math.max(0, outstanding).toString());
+  }
   const [paidAt, setPaidAt] = useState(new Date().toISOString().slice(0, 16));
   const [note, setNote] = useState("");
   const [slipFile, setSlipFile] = useState<File | null>(null);
@@ -447,6 +466,43 @@ function AddPaymentDialog({
           <DialogTitle>เพิ่มการชำระเงิน</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
+          {/* Quick calc */}
+          <div className="rounded-md border border-border bg-muted/30 p-3">
+            <div className="mb-2 flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">ราคาเต็ม (สุทธิ)</span>
+              <span className="font-mono font-semibold">{formatBaht(netAmount)}</span>
+            </div>
+            {paid > 0 && (
+              <div className="mb-2 flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">ชำระแล้ว / คงเหลือ</span>
+                <span className="font-mono">
+                  <span className="text-emerald-400">{formatBaht(paid)}</span>
+                  {" / "}
+                  <span className="text-amber-400">{formatBaht(outstanding)}</span>
+                </span>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-1.5">
+              <Button type="button" size="sm" variant="outline" onClick={() => fillDeposit(30)}>
+                มัดจำ 30%
+              </Button>
+              <Button type="button" size="sm" variant="outline" onClick={() => fillDeposit(50)}>
+                มัดจำ 50%
+              </Button>
+              <Button type="button" size="sm" variant="outline" onClick={() => fillDeposit(70)}>
+                มัดจำ 70%
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={fillFull}
+                className="bg-emerald-600 text-white hover:bg-emerald-500"
+              >
+                {paid > 0 ? "จ่ายส่วนที่เหลือ" : "ชำระเต็มจำนวน"}
+              </Button>
+            </div>
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>ประเภท</Label>
