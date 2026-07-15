@@ -5,33 +5,40 @@ import { createClient } from "@/lib/supabase/client";
 
 /**
  * Keep the current route's server components fresh without a manual F5.
- * Uses THREE mechanisms so it works even if Supabase Realtime isn't configured:
- *   1. Realtime — instant refresh when a subscribed table changes
+ * Lightweight: only refreshes on ACTUAL events — never polls on a timer.
+ *   1. Realtime — instant refresh when a subscribed table changes (if enabled)
  *   2. Focus/visibility — refresh when the user returns to the tab
- *   3. Polling — gentle fallback every `pollMs`
- * All paths are debounced so bursts trigger a single refresh.
+ * Debounced so bursts trigger a single refresh, and rate-limited so it can't
+ * fire more than once every few seconds (protects the DB from overload).
  */
 export function RealtimeRefresh({
   tables,
   channelName,
-  debounceMs = 600,
-  pollMs = 20000,
+  debounceMs = 800,
+  minGapMs = 4000,
 }: {
   tables: string[];
   channelName: string;
   debounceMs?: number;
-  pollMs?: number;
+  minGapMs?: number;
 }) {
   const router = useRouter();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastRef = useRef(0);
 
   useEffect(() => {
+    function doRefresh() {
+      const now = Date.now();
+      if (now - lastRef.current < minGapMs) return; // rate limit — กัน DB ถล่ม
+      lastRef.current = now;
+      router.refresh();
+    }
     function scheduleRefresh() {
       if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => router.refresh(), debounceMs);
+      timerRef.current = setTimeout(doRefresh, debounceMs);
     }
 
-    // 1) Realtime subscription
+    // 1) Realtime subscription (fires only when data actually changes)
     const supabase = createClient();
     const channel = supabase.channel(channelName);
     for (const table of tables) {
@@ -39,27 +46,19 @@ export function RealtimeRefresh({
     }
     channel.subscribe();
 
-    // 2) Refresh when tab becomes visible / window regains focus
+    // 2) Refresh when tab becomes visible again (no timer/polling)
     function onVisible() {
       if (document.visibilityState === "visible") scheduleRefresh();
     }
     document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", scheduleRefresh);
-
-    // 3) Polling fallback (only when tab is visible — ไม่ poll ตอนซ่อน)
-    const poll = setInterval(() => {
-      if (document.visibilityState === "visible") router.refresh();
-    }, pollMs);
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
-      clearInterval(poll);
       document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", scheduleRefresh);
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channelName, debounceMs, pollMs]);
+  }, [channelName, debounceMs, minGapMs]);
 
   return null;
 }

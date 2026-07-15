@@ -16,7 +16,10 @@
       "Bash(curl -s -L --max-time 15 \"https://sportwear-erp.vercel.app/designs\" -A \"Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\) AppleWebKit/537.36\" -H \"Accept: text/html\")",
       "Bash(git add *)",
       "Bash(git diff *)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(timeout 45 npx next start -p 3210)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3210/login)",
+      "Bash(pkill -f \"next start -p 3210\")"
     ]
   }
 }

@@ -4,23 +4,9 @@ import { AdminShell } from "@/components/admin/admin-shell";
 import { RealtimeRefresh } from "@/components/admin/realtime-refresh";
 import { getFollowupSuggestions } from "@/lib/suggestions/followup";
 
-// ตารางที่เมื่อเปลี่ยนแปลง → หน้าที่เปิดอยู่จะ refresh เอง (ทุกหน้าใน admin)
-const REALTIME_TABLES = [
-  "jobs",
-  "payments",
-  "expenses",
-  "job_items",
-  "job_timeline",
-  "factory_jobs",
-  "factory_messages",
-  "mockups",
-  "shipments",
-  "customers",
-  "factories",
-  "inquiries",
-  "catalog_items",
-  "designs",
-];
+// Subscribe เฉพาะตารางหลักที่เปลี่ยนบ่อย + สำคัญ (ประหยัด egress)
+// ตารางอื่นจะอัพเดทตอนกลับมาที่แท็บ (focus refresh) อยู่แล้ว
+const REALTIME_TABLES = ["jobs", "payments"];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
