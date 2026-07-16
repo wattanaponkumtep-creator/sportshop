@@ -17,7 +17,6 @@ const PRIORITIES: PriorityLevel[] = ["normal", "urgent", "rush"];
 export function JobForm({
   customers,
   factories,
-  preselectedCustomerId,
 }: {
   customers: { id: string; name: string }[];
   factories: { id: string; name: string }[];
@@ -26,9 +25,11 @@ export function JobForm({
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
 
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<NewJobInput>({
+  const { register, handleSubmit, setValue, watch } = useForm<NewJobInput>({
     defaultValues: {
-      customer_id: preselectedCustomerId ?? "",
+      customer_name: "",
+      customer_phone: "",
+      job_label: "",
       product_type: "",
       quantity: 0,
       sale_price: 0,
@@ -41,7 +42,6 @@ export function JobForm({
       note: "",
     },
   });
-  const customerId = watch("customer_id");
   const factoryId = watch("factory_id");
   const priority = watch("priority");
 
@@ -62,20 +62,43 @@ export function JobForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* datalist ชื่อลูกค้าเดิม (เลือกซ้ำได้ กันสร้างซ้ำ) */}
+      <datalist id="customer-names">
+        {customers.map((c) => (
+          <option key={c.id} value={c.name} />
+        ))}
+      </datalist>
+
       <Card>
         <CardHeader><CardTitle>ข้อมูลพื้นฐาน</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>ลูกค้า *</Label>
-            <Select value={customerId} onValueChange={(v) => setValue("customer_id", v)}>
-              <SelectTrigger><SelectValue placeholder="เลือกลูกค้า" /></SelectTrigger>
-              <SelectContent>
-                {customers.length === 0 && <div className="p-2 text-sm text-muted-foreground">ยังไม่มีลูกค้า</div>}
-                {customers.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {errors.customer_id && <p className="text-xs text-destructive">กรุณาเลือกลูกค้า</p>}
-            <input type="hidden" {...register("customer_id", { required: true })} />
+            <Label htmlFor="job_label">ชื่อไฟล์งาน / Job Label</Label>
+            <Input
+              id="job_label"
+              {...register("job_label")}
+              placeholder="เช่น เสื้อบอลทีม PUA A 25 ตัว, PSS-138"
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="customer_name">ชื่อลูกค้า *</Label>
+              <Input
+                id="customer_name"
+                list="customer-names"
+                {...register("customer_name", { required: true })}
+                placeholder="พิมพ์ชื่อลูกค้า (ใหม่/เก่าก็ได้)"
+                autoComplete="off"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                💡 พิมพ์ชื่อได้เลย — ถ้าเป็นลูกค้าใหม่ระบบสร้างให้อัตโนมัติ / ถ้าเก่าจะเลือกจากรายการ
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="customer_phone">เบอร์โทร (ไม่บังคับ)</Label>
+              <Input id="customer_phone" type="tel" {...register("customer_phone")} placeholder="081-234-5678" />
+            </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

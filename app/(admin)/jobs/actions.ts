@@ -13,7 +13,9 @@ const JOB_STATUS_VALUES = [
 const PRIORITY_VALUES = ["normal", "urgent", "rush"] as const;
 
 const newJobSchema = z.object({
-  customer_id: z.string().uuid("กรุณาเลือกลูกค้า"),
+  customer_name: z.string().trim().min(1, "กรุณาใส่ชื่อลูกค้า"),
+  customer_phone: z.string().trim().optional().nullable(),
+  job_label: z.string().trim().optional().nullable(),
   product_type: z.string().trim().optional().nullable(),
   quantity: z.coerce.number().int().min(0).default(0),
   sale_price: z.coerce.number().min(0).default(0),
@@ -37,10 +39,46 @@ export async function createJob(input: NewJobInput) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  // Find-or-create customer by name (ไม่ต้องสร้างลูกค้าก่อน)
+  const customerName = parsed.data.customer_name.trim();
+  const customerPhone = parsed.data.customer_phone?.trim() || null;
+
+  const { data: existing } = await supabase
+    .from("customers")
+    .select("id")
+    .ilike("name", customerName)
+    .limit(1)
+    .maybeSingle();
+
+  let customerId: string;
+  if (existing) {
+    customerId = (existing as { id: string }).id;
+    // อัพเดทเบอร์ถ้ากรอกมาใหม่และลูกค้ายังไม่มีเบอร์
+    if (customerPhone) {
+      await supabase.from("customers").update({ phone: customerPhone } as never).eq("id", customerId);
+    }
+  } else {
+    const { data: newCust, error: custErr } = await supabase
+      .from("customers")
+      .insert({
+        name: customerName,
+        phone: customerPhone,
+        primary_channel: customerPhone ? "phone" : "other",
+        created_by: user?.id ?? null,
+      } as never)
+      .select("id")
+      .single();
+    if (custErr || !newCust) {
+      return { ok: false as const, error: custErr?.message ?? "สร้างลูกค้าไม่สำเร็จ" };
+    }
+    customerId = (newCust as { id: string }).id;
+  }
+
   const { data: job, error } = await supabase
     .from("jobs")
     .insert({
-      customer_id: parsed.data.customer_id,
+      customer_id: customerId,
+      job_label: parsed.data.job_label || null,
       product_type: parsed.data.product_type || null,
       quantity: parsed.data.quantity,
       sale_price: parsed.data.sale_price,
