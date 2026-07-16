@@ -4,6 +4,17 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { sendDailyDigestToAllAdmins } from "@/lib/jobs/daily-digest";
 
+// LINE User ID = "U" + 32 hex chars (33 total). ไม่ใช่ @ID หรือชื่อเล่น
+const LINE_USER_ID_RE = /^U[0-9a-f]{32}$/i;
+
+function validateLineUserId(id: string): string | null {
+  const v = id.trim();
+  if (!LINE_USER_ID_RE.test(v)) {
+    return "LINE User ID ไม่ถูกต้อง — ต้องขึ้นต้นด้วย U ตามด้วย 32 ตัวอักษร (เอาจาก Webhook events ไม่ใช่ชื่อเล่น/@ID)";
+  }
+  return null;
+}
+
 const updatePersonalLineSchema = z.object({
   line_user_id_personal: z.string().trim().optional().nullable(),
 });
@@ -16,9 +27,16 @@ export async function updatePersonalLineUserId(input: z.input<typeof updatePerso
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false as const, error: "Not authenticated" };
 
+  const trimmed = parsed.data.line_user_id_personal?.trim() || null;
+  // ถ้าใส่ค่า ต้องเป็นรูปแบบ User ID ที่ถูกต้อง (ปล่อยว่างได้ = ลบออก)
+  if (trimmed) {
+    const err = validateLineUserId(trimmed);
+    if (err) return { ok: false as const, error: err };
+  }
+
   const { error } = await supabase
     .from("users")
-    .update({ line_user_id_personal: parsed.data.line_user_id_personal?.trim() || null })
+    .update({ line_user_id_personal: trimmed })
     .eq("id", user.id);
 
   if (error) return { ok: false as const, error: error.message };
@@ -65,6 +83,10 @@ export async function addDigestRecipient(input: z.input<typeof recipientSchema>)
 
   const supabase = await createClient();
   const lineId = parsed.data.line_user_id.trim();
+
+  // ตรวจรูปแบบ LINE User ID
+  const err = validateLineUserId(lineId);
+  if (err) return { ok: false as const, error: err };
 
   // กัน ID ซ้ำ
   const { data: existing } = await supabase
