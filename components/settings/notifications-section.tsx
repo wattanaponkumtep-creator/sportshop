@@ -59,7 +59,7 @@ export function NotificationsSection({
   }
 
   function handleSendDigestNow() {
-    if (!confirm("ส่งสรุปประจำวันให้ admin ทุกคนเลย?")) return;
+    if (!confirm("ส่งสรุปประจำวันให้ผู้รับทุกคนเลย?")) return;
     startTransition(async () => {
       const result = await sendDigestNow();
       if (result.ok) {

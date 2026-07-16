@@ -19,7 +19,8 @@
       "Read(//tmp/**)",
       "Bash(timeout 45 npx next start -p 3210)",
       "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3210/login)",
-      "Bash(pkill -f \"next start -p 3210\")"
+      "Bash(pkill -f \"next start -p 3210\")",
+      "Bash(rm -rf .next)"
     ]
   }
 }

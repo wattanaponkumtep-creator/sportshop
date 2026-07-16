@@ -89,7 +89,10 @@ export async function buildAdminDigestMessage(): Promise<string> {
 }
 
 /**
- * Send daily digest to all admins who have line_user_id_personal set.
+ * Send daily digest to all recipients:
+ *   1. admins who have line_user_id_personal set (users table)
+ *   2. extra recipients in digest_recipients table (หลายไอดี)
+ * De-duplicated by LINE user ID.
  */
 export async function sendDailyDigestToAllAdmins() {
   if (!isLineConfigured()) {
@@ -97,16 +100,32 @@ export async function sendDailyDigestToAllAdmins() {
   }
 
   const supabase = createServiceClient();
-  const { data: admins } = await supabase
-    .from("users")
-    .select("id, line_user_id_personal, name")
-    .not("line_user_id_personal", "is", null)
-    .eq("is_active", true);
 
-  const targets = (admins ?? []) as Array<{ id: string; line_user_id_personal: string; name: string | null }>;
+  const [{ data: admins }, { data: recipients }] = await Promise.all([
+    supabase
+      .from("users")
+      .select("line_user_id_personal, name")
+      .not("line_user_id_personal", "is", null)
+      .eq("is_active", true),
+    supabase
+      .from("digest_recipients")
+      .select("line_user_id, name")
+      .eq("is_active", true),
+  ]);
+
+  // รวม + ลบ ID ซ้ำ
+  const byId = new Map<string, string | null>(); // line_user_id → name
+  for (const a of (admins ?? []) as Array<{ line_user_id_personal: string; name: string | null }>) {
+    if (a.line_user_id_personal) byId.set(a.line_user_id_personal, a.name);
+  }
+  for (const r of (recipients ?? []) as Array<{ line_user_id: string; name: string | null }>) {
+    if (r.line_user_id && !byId.has(r.line_user_id)) byId.set(r.line_user_id, r.name);
+  }
+
+  const targets = Array.from(byId.entries()).map(([line_user_id, name]) => ({ line_user_id, name }));
 
   if (targets.length === 0) {
-    return { ok: false as const, error: "ยังไม่มี admin ใส่ LINE personal ID" };
+    return { ok: false as const, error: "ยังไม่มีผู้รับ — เพิ่ม LINE ID ใน Settings" };
   }
 
   const message = await buildAdminDigestMessage();
@@ -114,16 +133,16 @@ export async function sendDailyDigestToAllAdmins() {
   let sent = 0;
   const failures: string[] = [];
 
-  for (const admin of targets) {
-    const result = await pushLineMessage(admin.line_user_id_personal, [{ type: "text", text: message }]);
+  for (const t of targets) {
+    const result = await pushLineMessage(t.line_user_id, [{ type: "text", text: message }]);
     if (result.ok) sent++;
-    else failures.push(`${admin.name ?? admin.id}: ${result.error}`);
+    else failures.push(`${t.name ?? t.line_user_id}: ${result.error}`);
 
     await supabase.from("notifications").insert({
       customer_id: null,
       channel: "line_oa",
       template: "admin_daily_digest",
-      payload: { user_id: admin.line_user_id_personal, text: message },
+      payload: { user_id: t.line_user_id, text: message },
       status: result.ok ? "sent" : "failed",
       sent_at: result.ok ? new Date().toISOString() : null,
     });

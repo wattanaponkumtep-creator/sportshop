@@ -114,6 +114,14 @@ export interface CatalogItem {
   updated_at: string;
 }
 
+export interface DigestRecipient {
+  id: string;
+  name: string | null;
+  line_user_id: string;
+  is_active: boolean;
+  created_at: string;
+}
+
 export type ExpenseCategory =
   | "factory"
   | "material"
@@ -436,6 +444,7 @@ export type Database = {
       catalog_items: TableDef<CatalogItem>;
       inquiries: TableDef<Inquiry>;
       expenses: TableDef<Expense>;
+      digest_recipients: TableDef<DigestRecipient>;
       designs: TableDef<Design>;
       customer_comments: TableDef<{ id: string; job_id: string; author_name: string | null; message: string; created_at: string }>;
     };

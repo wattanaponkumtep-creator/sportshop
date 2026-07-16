@@ -52,3 +52,54 @@ export async function sendDigestNow() {
   const result = await sendDailyDigestToAllAdmins();
   return result;
 }
+
+// ---------- Digest recipients (หลาย LINE ID) ----------
+const recipientSchema = z.object({
+  name: z.string().trim().optional().nullable(),
+  line_user_id: z.string().trim().min(1, "กรุณาใส่ LINE User ID"),
+});
+
+export async function addDigestRecipient(input: z.input<typeof recipientSchema>) {
+  const parsed = recipientSchema.safeParse(input);
+  if (!parsed.success) return { ok: false as const, error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" };
+
+  const supabase = await createClient();
+  const lineId = parsed.data.line_user_id.trim();
+
+  // กัน ID ซ้ำ
+  const { data: existing } = await supabase
+    .from("digest_recipients")
+    .select("id")
+    .eq("line_user_id", lineId)
+    .maybeSingle();
+  if (existing) return { ok: false as const, error: "LINE ID นี้มีอยู่แล้ว" };
+
+  const { error } = await supabase.from("digest_recipients").insert({
+    name: parsed.data.name?.trim() || null,
+    line_user_id: lineId,
+    is_active: true,
+  });
+  if (error) return { ok: false as const, error: error.message };
+
+  revalidatePath("/settings");
+  return { ok: true as const };
+}
+
+export async function toggleDigestRecipient(id: string, is_active: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("digest_recipients")
+    .update({ is_active })
+    .eq("id", id);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath("/settings");
+  return { ok: true as const };
+}
+
+export async function deleteDigestRecipient(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("digest_recipients").delete().eq("id", id);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath("/settings");
+  return { ok: true as const };
+}

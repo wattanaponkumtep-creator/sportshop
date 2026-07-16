@@ -10,6 +10,8 @@ import { LinkLineUserButton } from "@/components/settings/link-line-user";
 import { NotificationsSection } from "@/components/settings/notifications-section";
 import { CopyLineUserId } from "@/components/settings/copy-line-user-id";
 import { ShopInfoForm } from "@/components/settings/shop-info-form";
+import { DigestRecipients } from "@/components/settings/digest-recipients";
+import type { DigestRecipient } from "@/lib/types/database";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +21,7 @@ export default async function SettingsPage() {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [{ data: events }, { data: customers }, { data: meProfile }, { data: shopInfoRows }] = await Promise.all([
+  const [{ data: events }, { data: customers }, { data: meProfile }, { data: shopInfoRows }, { data: digestRows }] = await Promise.all([
     supabase
       .from("line_webhook_events")
       .select("*")
@@ -32,6 +34,7 @@ export default async function SettingsPage() {
       .eq("id", user?.id ?? "")
       .maybeSingle(),
     supabase.from("shop_info").select("shop_name, address, phone, email, tax_id, bank_info").eq("id", 1).limit(1),
+    supabase.from("digest_recipients").select("*").order("created_at", { ascending: false }),
   ]);
 
   const me = meProfile as { calendar_token: string; line_user_id_personal: string | null } | null;
@@ -61,6 +64,8 @@ export default async function SettingsPage() {
           siteUrl={siteUrl}
         />
       )}
+
+      <DigestRecipients recipients={(digestRows ?? []) as DigestRecipient[]} />
 
       <Card>
         <CardHeader>
