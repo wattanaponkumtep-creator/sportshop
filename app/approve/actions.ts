@@ -3,11 +3,20 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/server";
 
+const checklistSchema = z.object({
+  logo: z.boolean(),
+  font: z.boolean(),
+  color: z.boolean(),
+  details: z.boolean(),
+  agreed: z.boolean(),
+});
+
 const decisionSchema = z.object({
   token: z.string().min(1),
   decision: z.enum(["approve", "reject"]),
   note: z.string().trim().optional().nullable(),
   name: z.string().trim().optional().nullable(),
+  checklist: checklistSchema.optional().nullable(),
 });
 
 export type DecisionInput = z.input<typeof decisionSchema>;
@@ -20,12 +29,21 @@ export async function submitMockupDecision(input: DecisionInput) {
     return { ok: false as const, error: "กรุณาใส่หมายเหตุการขอแก้ไข" };
   }
 
+  // อนุมัติ: ต้องตรวจครบทุกข้อ + ยอมรับข้อตกลง
+  if (parsed.data.decision === "approve") {
+    const c = parsed.data.checklist;
+    if (!c || !c.logo || !c.font || !c.color || !c.details || !c.agreed) {
+      return { ok: false as const, error: "กรุณาตรวจสอบให้ครบทุกข้อและยอมรับข้อตกลงก่อนอนุมัติ" };
+    }
+  }
+
   const supabase = createServiceClient();
   const { data, error } = await supabase.rpc("submit_mockup_decision", {
     p_token: parsed.data.token,
     p_decision: parsed.data.decision,
     p_note: parsed.data.note ?? undefined,
     p_name: parsed.data.name ?? undefined,
+    p_checklist: parsed.data.decision === "approve" ? parsed.data.checklist ?? undefined : undefined,
   });
 
   if (error) return { ok: false as const, error: error.message };

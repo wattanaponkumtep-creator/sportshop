@@ -455,7 +455,7 @@ export type Database = {
       is_staff: { Args: Record<string, never>; Returns: boolean };
       get_mockup_for_approval: { Args: { p_token: string }; Returns: unknown };
       submit_mockup_decision: {
-        Args: { p_token: string; p_decision: string; p_note?: string; p_name?: string };
+        Args: { p_token: string; p_decision: string; p_note?: string; p_name?: string; p_checklist?: unknown };
         Returns: unknown;
       };
       post_customer_comment: {

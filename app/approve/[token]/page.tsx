@@ -7,6 +7,7 @@ import { MOCKUP_STATUS_COLOR, MOCKUP_STATUS_LABEL } from "@/lib/constants";
 import type { MockupStatus } from "@/lib/types/database";
 import { formatDateTH } from "@/lib/utils";
 import { ApprovalForm } from "@/components/approval/approval-form";
+import { MockupGallery } from "@/components/approval/mockup-gallery";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ type MockupPayload = {
   decision_note: string | null;
   decided_at: string | null;
   decided_by_name: string | null;
+  checklist: { logo?: boolean; font?: boolean; color?: boolean; details?: boolean; agreed?: boolean } | null;
   created_at: string;
   customer_name: string;
 };
@@ -75,30 +77,7 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
             <div className="mb-3 inline-flex items-center gap-2 text-sm font-semibold">
               <ImageIcon className="h-4 w-4 text-purple-400" /> ภาพแบบเสื้อ ({signedUrls.length} รูป)
             </div>
-            {signedUrls.length === 0 ? (
-              <p className="py-8 text-center text-muted-foreground">ไม่มีรูป</p>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {signedUrls.map((url, i) => (
-                  url ? (
-                    <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border border-border bg-background">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={url}
-                        alt={`Mockup ${i + 1}`}
-                        className="h-auto w-full object-contain"
-                        loading="lazy"
-                      />
-                    </a>
-                  ) : (
-                    <div key={i} className="flex h-40 items-center justify-center rounded-lg border border-destructive/30 bg-destructive/5 text-sm text-destructive">
-                      ⚠ โหลดรูปไม่สำเร็จ
-                    </div>
-                  )
-                ))}
-              </div>
-            )}
-            <p className="mt-3 text-center text-xs text-muted-foreground">คลิกที่รูปเพื่อดูขนาดใหญ่</p>
+            <MockupGallery images={signedUrls} jobCode={mockup.job_code} title={mockup.title} />
           </CardContent>
         </Card>
 
@@ -128,6 +107,17 @@ function DecisionDisplay({ mockup }: { mockup: MockupPayload }) {
             ตัดสินใจเมื่อ {formatDateTH(mockup.decided_at, "d MMM yy HH:mm")}
             {mockup.decided_by_name && ` โดย ${mockup.decided_by_name}`}
           </p>
+          {mockup.checklist && (
+            <div className="mx-auto mt-3 max-w-sm rounded-md border border-emerald-500/20 bg-background/50 p-3 text-left text-sm">
+              <div className="mb-1.5 text-xs font-medium uppercase text-muted-foreground">ยืนยันว่าตรวจสอบแล้ว:</div>
+              <ul className="space-y-1 text-sm">
+                <li>✓ โลโก้ / ตราสัญลักษณ์</li>
+                <li>✓ ตัวอักษร / ฟอนต์ / ตัวสะกด</li>
+                <li>✓ สี</li>
+                <li>✓ รายละเอียดอื่น ๆ</li>
+              </ul>
+            </div>
+          )}
           {mockup.decision_note && (
             <div className="mt-3 rounded-md border border-emerald-500/20 bg-background/50 p-3 text-sm">
               {mockup.decision_note}
