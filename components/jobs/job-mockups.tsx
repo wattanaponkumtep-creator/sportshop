@@ -13,12 +13,28 @@ import { formatDateTH, cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { createClient } from "@/lib/supabase/client";
 import { createMockup, sendMockupForApproval, deleteMockup, createMockupFileUrls } from "@/app/(admin)/jobs/mockup-actions";
+import { MockupApprovalDialog } from "@/components/jobs/mockup-approval-dialog";
 import type { Mockup } from "@/lib/types/database";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
-export function JobMockups({ jobId, mockups }: { jobId: string; mockups: Mockup[] }) {
+type JobMeta = { jobCode: string; jobLabel?: string | null; customerName: string };
+
+export function JobMockups({
+  jobId,
+  mockups,
+  jobCode,
+  jobLabel,
+  customerName,
+}: {
+  jobId: string;
+  mockups: Mockup[];
+  jobCode: string;
+  jobLabel?: string | null;
+  customerName: string;
+}) {
   const [creating, setCreating] = useState(false);
+  const meta: JobMeta = { jobCode, jobLabel, customerName };
 
   return (
     <div className="space-y-4">
@@ -40,7 +56,7 @@ export function JobMockups({ jobId, mockups }: { jobId: string; mockups: Mockup[
             mockups
               .slice()
               .sort((a, b) => b.version - a.version)
-              .map((m) => <MockupCard key={m.id} mockup={m} jobId={jobId} />)
+              .map((m) => <MockupCard key={m.id} mockup={m} jobId={jobId} meta={meta} />)
           )}
         </CardContent>
       </Card>
@@ -50,7 +66,7 @@ export function JobMockups({ jobId, mockups }: { jobId: string; mockups: Mockup[
   );
 }
 
-function MockupCard({ mockup, jobId }: { mockup: Mockup; jobId: string }) {
+function MockupCard({ mockup, jobId, meta }: { mockup: Mockup; jobId: string; meta: JobMeta }) {
   const [, startTransition] = useTransition();
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
@@ -122,13 +138,25 @@ function MockupCard({ mockup, jobId }: { mockup: Mockup; jobId: string }) {
             </div>
           )}
         </div>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap justify-end gap-1">
           {(mockup.status === "draft" || mockup.status === "rejected") && (
             <Button size="sm" onClick={handleSend}>
               <Send className="h-4 w-4" /> ส่งอนุมัติ
             </Button>
           )}
-          {mockup.status !== "draft" && (
+          {mockup.status === "awaiting_approval" && (
+            <MockupApprovalDialog
+              mockupId={mockup.id}
+              jobId={jobId}
+              version={mockup.version}
+              approvalToken={mockup.approval_token}
+              jobCode={meta.jobCode}
+              jobLabel={meta.jobLabel}
+              mockupTitle={mockup.title}
+              customerName={meta.customerName}
+            />
+          )}
+          {mockup.status === "approved" && (
             <Button variant="outline" size="sm" onClick={handleCopyLink}>
               {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
               ลิงก์

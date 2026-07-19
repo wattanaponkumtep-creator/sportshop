@@ -87,6 +87,61 @@ export async function sendMockupForApproval(mockupId: string, jobId: string) {
   return { ok: true as const };
 }
 
+// อนุมัติแทนลูกค้า (กรณีลูกค้ายืนยันทางแชท/โทร ไม่ได้กดลิงค์เอง)
+// admin เป็นผู้บันทึก — เก็บชื่อผู้ยืนยัน + หมายเหตุว่ายืนยันช่องทางไหน
+export async function markMockupApprovedManually(
+  mockupId: string,
+  jobId: string,
+  confirmedBy: string,
+) {
+  const supabase = await createClient();
+
+  const { data: mockup } = await supabase
+    .from("mockups")
+    .select("version, status")
+    .eq("id", mockupId)
+    .maybeSingle();
+
+  if (!mockup) return { ok: false as const, error: "ไม่พบ mockup" };
+  const m = mockup as { version: number; status: string };
+
+  if (m.status !== "awaiting_approval") {
+    return { ok: false as const, error: `Mockup สถานะ "${m.status}" อนุมัติแทนไม่ได้` };
+  }
+
+  const name = confirmedBy.trim() || "ลูกค้า (ยืนยันทางแชท)";
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const { error } = await supabase
+    .from("mockups")
+    .update({
+      status: "approved",
+      decided_at: new Date().toISOString(),
+      decided_by_name: name,
+      decision_note: "ลูกค้ายืนยันทางแชท/โทร (บันทึกโดยร้าน)",
+      checklist: { logo: true, font: true, color: true, details: true, agreed: true, via: "staff" },
+    })
+    .eq("id", mockupId);
+  if (error) return { ok: false as const, error: error.message };
+
+  // ดันสถานะงานเข้าโรงงาน (เหมือน flow อนุมัติปกติ)
+  await supabase
+    .from("jobs")
+    .update({ status: "sent_to_factory" })
+    .eq("id", jobId)
+    .in("status", ["designing", "awaiting_approval"]);
+
+  await supabase.from("job_timeline").insert({
+    job_id: jobId,
+    event_type: "mockup_decision",
+    description: `ลูกค้าอนุมัติ Mockup v${m.version} (ยืนยันทางแชท — บันทึกโดยร้าน โดย ${name})`,
+    actor_id: user?.id ?? null,
+  });
+
+  revalidatePath(`/jobs/${jobId}`);
+  return { ok: true as const };
+}
+
 export async function deleteMockup(mockupId: string, jobId: string) {
   const supabase = await createClient();
 

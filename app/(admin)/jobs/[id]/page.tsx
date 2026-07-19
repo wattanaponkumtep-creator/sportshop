@@ -188,7 +188,13 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         </TabsContent>
 
         <TabsContent value="mockups" className="mt-4">
-          <JobMockups jobId={job.id} mockups={mockups ?? []} />
+          <JobMockups
+            jobId={job.id}
+            mockups={mockups ?? []}
+            jobCode={job.job_code}
+            jobLabel={job.job_label}
+            customerName={customer?.name ?? "ลูกค้า"}
+          />
         </TabsContent>
 
         <TabsContent value="payments" className="mt-4 space-y-4">

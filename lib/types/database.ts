@@ -361,6 +361,7 @@ export interface Mockup {
   decision_note: string | null;
   decided_at: string | null;
   decided_by_name: string | null;
+  checklist: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
