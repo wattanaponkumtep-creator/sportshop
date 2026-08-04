@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { Job, JobStatus } from "@/lib/types/database";
+import type { JobProfitRow } from "@/lib/reports/finance";
 
 const TZ_OFFSET_MS = 7 * 60 * 60 * 1000;
 
@@ -50,13 +51,41 @@ export function resolveRange(range: FinanceRange): { start: string; end: string;
 
 export type ReportJob = Pick<
   Job,
-  | "id" | "status" | "sale_price" | "discount" | "cost" | "shipping_cost" | "other_cost"
+  | "id" | "job_code" | "job_label" | "status" | "sale_price" | "discount" | "cost" | "shipping_cost" | "other_cost"
   | "quantity" | "received_at" | "due_date" | "updated_at" | "customer_id" | "factory_id"
 > & {
   customers?: { name: string } | { name: string }[] | null;
   factories?: { name: string } | { name: string }[] | null;
   job_timeline?: { event_type: string; created_at: string }[];
 };
+
+function customerNameOf(j: ReportJob): string {
+  const c = Array.isArray(j.customers) ? j.customers[0] : j.customers;
+  return c?.name ?? "—";
+}
+
+function toJobProfitRow(j: ReportJob): JobProfitRow {
+  const revenue = netSale(j);
+  const factoryCost = Number(j.cost ?? 0);
+  const shippingCost = Number(j.shipping_cost ?? 0);
+  const otherCost = Number(j.other_cost ?? 0);
+  const total = factoryCost + shippingCost + otherCost;
+  return {
+    id: j.id,
+    jobCode: j.job_code,
+    jobLabel: j.job_label,
+    customerName: customerNameOf(j),
+    status: j.status,
+    closedAt: j.updated_at,
+    revenue,
+    factoryCost,
+    shippingCost,
+    otherCost,
+    totalCost: total,
+    profit: revenue - total,
+    margin: revenue > 0 ? ((revenue - total) / revenue) * 100 : 0,
+  };
+}
 
 function isClosed(j: ReportJob): boolean {
   return j.status === "shipped" || j.status === "completed";
@@ -153,7 +182,7 @@ export async function getReportData() {
     supabase
       .from("jobs")
       .select(
-        "id, status, sale_price, discount, cost, shipping_cost, other_cost, quantity, received_at, due_date, updated_at, customer_id, factory_id, customers(name), factories(name)",
+        "id, job_code, job_label, status, sale_price, discount, cost, shipping_cost, other_cost, quantity, received_at, due_date, updated_at, customer_id, factory_id, customers(name), factories(name)",
       )
       .or(`received_at.gte.${allTimeStart},updated_at.gte.${allTimeStart}`)
       .order("received_at", { ascending: false }),
@@ -184,8 +213,16 @@ export async function getReportData() {
   const thisMonth = monthly[5];
   const lastMonth = monthly[4];
 
+  // ---------- Per-job profit breakdown (this month + YTD) ----------
+  const thisMonthBounds = getMonthBoundsBangkok(0);
+  const jobBreakdownThisMonth = allJobs
+    .filter((j) => isClosed(j) && j.updated_at >= thisMonthBounds.start && j.updated_at < thisMonthBounds.end)
+    .map(toJobProfitRow)
+    .sort((a, b) => b.profit - a.profit);
+
   // ---------- Year-to-date totals ----------
   const ytdJobsClosed = allJobs.filter((j) => isClosed(j) && j.updated_at >= yearStart);
+  const jobBreakdownYtd = ytdJobsClosed.map(toJobProfitRow).sort((a, b) => b.profit - a.profit);
   const ytdPayments = allPayments.filter((p) => p.paid_at >= yearStart);
   const ytd = {
     revenue: calcRevenue(ytdJobsClosed),
@@ -349,6 +386,8 @@ export async function getReportData() {
     thisMonth,
     lastMonth,
     ytd,
+    jobBreakdownThisMonth,
+    jobBreakdownYtd,
     outstanding: {
       total: outstandingTotal,
       aging,

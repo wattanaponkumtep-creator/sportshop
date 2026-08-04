@@ -26,6 +26,7 @@ import { BarChart } from "@/components/reports/bar-chart";
 import { StatusDistribution } from "@/components/reports/status-distribution";
 import { AgingCard } from "@/components/reports/aging-card";
 import { TrendChart } from "@/components/reports/trend-chart";
+import { JobProfitSection } from "@/components/reports/job-profit-section";
 
 export const dynamic = "force-dynamic";
 
@@ -169,6 +170,16 @@ export default async function ReportsPage() {
             iconColor="text-blue-400"
           />
         </div>
+      </Section>
+
+      {/* ============================== */}
+      {/* 3.5 กำไรแยกตามงาน               */}
+      {/* ============================== */}
+      <Section title="🧾 กำไรแยกตามงาน" subtitle="กำไร/ต้นทุนแต่ละบาทมาจากงานไหน — แตะที่งานเพื่อดูรายละเอียด">
+        <JobProfitSection
+          thisMonth={data.jobBreakdownThisMonth}
+          ytd={data.jobBreakdownYtd}
+        />
       </Section>
 
       {/* ============================== */}
