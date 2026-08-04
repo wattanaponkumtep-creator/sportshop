@@ -24,6 +24,7 @@ import { TrendChart } from "@/components/reports/trend-chart";
 import { DonutChart } from "@/components/reports/donut-chart";
 import { FinanceRangeTabs } from "@/components/reports/finance-range-tabs";
 import { ExpenseManager } from "@/components/reports/expense-manager";
+import { JobProfitTable } from "@/components/reports/job-profit-table";
 import { EXPENSE_CATEGORY_LABEL, EXPENSE_CATEGORY_EMOJI } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -180,6 +181,17 @@ export default async function FinanceReportPage({
             </div>
           </CardContent>
         </Card>
+      </section>
+
+      {/* ============ 3.5 กำไรรายงาน แยกตามงาน ============ */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="font-display text-lg font-bold sm:text-xl">🧾 กำไรแยกตามงาน</h2>
+          <p className="text-xs text-muted-foreground">
+            งานที่ปิดแล้ว (ส่ง/เสร็จ) ใน {data.rangeLabel} — กำไร/ต้นทุนแต่ละบาทมาจากงานไหน
+          </p>
+        </div>
+        <JobProfitTable rows={data.jobBreakdown} />
       </section>
 
       {/* ============ 4. Donut charts ============ */}

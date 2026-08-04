@@ -6,6 +6,9 @@ import type { Expense, ExpenseCategory } from "@/lib/types/database";
 type PaymentRow = { type: string; amount: number; paid_at: string };
 type ExpenseRow = { category: ExpenseCategory; amount: number; paid_at: string };
 type ClosedJobRow = {
+  id: string;
+  job_code: string;
+  job_label: string | null;
   status: string;
   sale_price: number;
   discount: number;
@@ -14,7 +17,30 @@ type ClosedJobRow = {
   other_cost: number;
   product_type: string | null;
   updated_at: string;
+  customers: { name: string } | { name: string }[] | null;
 };
+
+export type JobProfitRow = {
+  id: string;
+  jobCode: string;
+  jobLabel: string | null;
+  customerName: string;
+  status: string;
+  closedAt: string;
+  revenue: number;
+  factoryCost: number;
+  shippingCost: number;
+  otherCost: number;
+  totalCost: number;
+  profit: number;
+  margin: number;
+};
+
+function customerNameOf(c: ClosedJobRow["customers"]): string {
+  if (!c) return "—";
+  const obj = Array.isArray(c) ? c[0] : c;
+  return obj?.name ?? "—";
+}
 
 // หมวดที่ถือเป็น "ต้นทุนงาน" (COGS) — ไม่นับซ้ำใน operating expenses
 const COGS_CATEGORIES: ExpenseCategory[] = ["factory", "material", "shipping"];
@@ -57,7 +83,7 @@ export async function getFinanceData(range: FinanceRange = "this_month") {
     supabase.from("expenses").select("category, amount, paid_at").gte("paid_at", dataStart),
     supabase
       .from("jobs")
-      .select("status, sale_price, discount, cost, shipping_cost, other_cost, product_type, updated_at")
+      .select("id, job_code, job_label, status, sale_price, discount, cost, shipping_cost, other_cost, product_type, updated_at, customers(name)")
       .gte("updated_at", dataStart)
       .in("status", ["shipped", "completed"]),
     supabase.from("expenses").select("*").order("paid_at", { ascending: false }).limit(20),
@@ -117,6 +143,33 @@ export async function getFinanceData(range: FinanceRange = "this_month") {
   const incomeByType = Array.from(incByType.entries())
     .map(([type, amount]) => ({ type, amount }))
     .sort((a, b) => b.amount - a.amount);
+
+  // ---------- Per-job breakdown (ranged) — กำไร/ต้นทุนมาจากงานไหน ----------
+  const jobBreakdown: JobProfitRow[] = rangedClosed
+    .map((j) => {
+      const revenue = net(j.sale_price, j.discount);
+      const factoryCost = Number(j.cost ?? 0);
+      const shippingCost = Number(j.shipping_cost ?? 0);
+      const otherCost = Number(j.other_cost ?? 0);
+      const totalCost = factoryCost + shippingCost + otherCost;
+      const profit = revenue - totalCost;
+      return {
+        id: j.id,
+        jobCode: j.job_code,
+        jobLabel: j.job_label,
+        customerName: customerNameOf(j.customers),
+        status: j.status,
+        closedAt: j.updated_at,
+        revenue,
+        factoryCost,
+        shippingCost,
+        otherCost,
+        totalCost,
+        profit,
+        margin: revenue > 0 ? (profit / revenue) * 100 : 0,
+      };
+    })
+    .sort((a, b) => b.profit - a.profit);
 
   // ---------- Monthly trend (always last 6 months) ----------
   const monthly: FinanceMonth[] = [];
@@ -187,6 +240,7 @@ export async function getFinanceData(range: FinanceRange = "this_month") {
     monthly,
     expenseByCategory,
     incomeByType,
+    jobBreakdown,
     pending,
     recentExpenses: (recentExpenses ?? []) as Expense[],
   };

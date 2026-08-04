@@ -20,7 +20,10 @@
       "Bash(timeout 45 npx next start -p 3210)",
       "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3210/login)",
       "Bash(pkill -f \"next start -p 3210\")",
-      "Bash(rm -rf .next)"
+      "Bash(rm -rf .next)",
+      "Bash(git rev-list *)",
+      "mcp__visualize__read_me",
+      "mcp__visualize__show_widget"
     ]
   }
 }
