@@ -12,6 +12,29 @@ import type { JobStatus, PriorityLevel } from "@/lib/types/database";
 
 export const dynamic = "force-dynamic";
 
+const JOB_LIST_SELECT =
+  "id, job_code, status, priority, quantity, sale_price, discount, cost, shipping_cost, other_cost, due_date, created_at, product_type, customer_id, factory_id, customers(name)";
+
+// คำนวณกำไรต่องาน: (ยอดขาย − ส่วนลด) − (ต้นทุนโรงงาน + ค่าส่ง + ค่าอื่น)
+function jobFinance(j: {
+  sale_price?: number | null;
+  discount?: number | null;
+  cost?: number | null;
+  shipping_cost?: number | null;
+  other_cost?: number | null;
+}) {
+  const net = Math.max(0, Number(j.sale_price ?? 0) - Number(j.discount ?? 0));
+  const totalCost = Number(j.cost ?? 0) + Number(j.shipping_cost ?? 0) + Number(j.other_cost ?? 0);
+  const profit = net - totalCost;
+  return {
+    net,
+    totalCost,
+    profit,
+    margin: net > 0 ? (profit / net) * 100 : 0,
+    hasCost: totalCost > 0,
+  };
+}
+
 type SearchParams = {
   q?: string;
   status?: string;
@@ -33,7 +56,7 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
   // Build the query with all filters
   let query = supabase
     .from("jobs")
-    .select("id, job_code, status, priority, quantity, sale_price, due_date, created_at, product_type, customer_id, factory_id, customers(name)")
+    .select(JOB_LIST_SELECT)
     .order("created_at", { ascending: false })
     .limit(500);
 
@@ -69,7 +92,7 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
     // Include both: jobs that already matched (by code/product), and jobs whose customer name matches q
     const allJobs = await supabase
       .from("jobs")
-      .select("id, job_code, status, priority, quantity, sale_price, due_date, created_at, product_type, customer_id, factory_id, customers(name)")
+      .select(JOB_LIST_SELECT)
       .in("customer_id", Array.from(matchedIds.size > 0 ? matchedIds : ["00000000-0000-0000-0000-000000000000"]))
       .order("created_at", { ascending: false })
       .limit(500);
@@ -147,6 +170,7 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
             {jobs.map((j) => {
               const cust = (j.customers as { name: string } | null)?.name ?? "-";
               const isOverdue = j.due_date && j.due_date < todayISO && !["completed", "shipped", "cancelled"].includes(j.status as string);
+              const fin = jobFinance(j);
               return (
                 <Link key={j.id} href={`/jobs/${j.id}`}>
                   <Card className={`transition hover:border-primary/50 ${isOverdue ? "border-destructive/40" : ""}`}>
@@ -165,7 +189,28 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
                       <div className="text-sm">{cust}</div>
                       <div className="flex items-center justify-between gap-2">
                         <Badge variant="outline" className={JOB_STATUS_COLOR[j.status as JobStatus]}>{JOB_STATUS_LABEL[j.status as JobStatus]}</Badge>
-                        <span className="text-sm font-semibold tabular-nums">{formatBaht(Number(j.sale_price))}</span>
+                        <span className="text-sm font-semibold tabular-nums">{formatBaht(fin.net)}</span>
+                      </div>
+                      {/* ต้นทุน + กำไร */}
+                      <div className="flex items-center justify-between rounded-md bg-card/60 px-2 py-1.5 text-xs">
+                        <span className="text-muted-foreground">
+                          ต้นทุน <span className="font-mono tabular-nums text-rose-400">{fin.hasCost ? formatBaht(fin.totalCost) : "—"}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <span className="text-muted-foreground">กำไร</span>
+                          {fin.hasCost ? (
+                            <>
+                              <span className={`font-mono font-semibold tabular-nums ${fin.profit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                                {fin.profit < 0 ? "-" : ""}{formatBaht(Math.abs(fin.profit))}
+                              </span>
+                              <span className={`tabular-nums ${fin.margin >= 20 ? "text-emerald-400" : fin.margin >= 0 ? "text-amber-400" : "text-rose-400"}`}>
+                                ({fin.margin.toFixed(0)}%)
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-muted-foreground">ยังไม่ใส่ต้นทุน</span>
+                          )}
+                        </span>
                       </div>
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <span>{j.quantity} ตัว</span>
@@ -185,48 +230,70 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
           {/* Desktop: table */}
           <Card className="hidden md:block">
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>JOB</TableHead>
-                    <TableHead>ลูกค้า</TableHead>
-                    <TableHead>สถานะ</TableHead>
-                    <TableHead>ความสำคัญ</TableHead>
-                    <TableHead className="text-right">จำนวน</TableHead>
-                    <TableHead className="text-right">ยอดขาย</TableHead>
-                    <TableHead>กำหนดส่ง</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {jobs.map((j) => {
-                    const isOverdue = j.due_date && j.due_date < todayISO && !["completed", "shipped", "cancelled"].includes(j.status as string);
-                    return (
-                      <TableRow key={j.id} className={isOverdue ? "bg-destructive/5" : ""}>
-                        <TableCell>
-                          <Link href={`/jobs/${j.id}`} className="font-mono font-medium hover:text-primary">{j.job_code}</Link>
-                        </TableCell>
-                        <TableCell>{(j.customers as { name: string } | null)?.name ?? "-"}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={JOB_STATUS_COLOR[j.status as JobStatus]}>{JOB_STATUS_LABEL[j.status as JobStatus]}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={PRIORITY_COLOR[j.priority as PriorityLevel]}>{PRIORITY_LABEL[j.priority as PriorityLevel]}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">{j.quantity}</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatBaht(Number(j.sale_price))}</TableCell>
-                        <TableCell>
-                          {j.due_date ? (
-                            <span className={`inline-flex items-center gap-1 ${isOverdue ? "font-medium text-destructive" : "text-muted-foreground"}`}>
-                              {isOverdue && <AlertTriangle className="h-3 w-3" />}
-                              {formatDateTH(j.due_date, "d MMM yy")}
-                            </span>
-                          ) : <span className="text-muted-foreground">-</span>}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>JOB</TableHead>
+                      <TableHead>ลูกค้า</TableHead>
+                      <TableHead>สถานะ</TableHead>
+                      <TableHead>ความสำคัญ</TableHead>
+                      <TableHead className="text-right">จำนวน</TableHead>
+                      <TableHead className="text-right">ยอดขาย</TableHead>
+                      <TableHead className="text-right">ต้นทุน</TableHead>
+                      <TableHead className="text-right">กำไร</TableHead>
+                      <TableHead>กำหนดส่ง</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {jobs.map((j) => {
+                      const isOverdue = j.due_date && j.due_date < todayISO && !["completed", "shipped", "cancelled"].includes(j.status as string);
+                      const fin = jobFinance(j);
+                      return (
+                        <TableRow key={j.id} className={isOverdue ? "bg-destructive/5" : ""}>
+                          <TableCell>
+                            <Link href={`/jobs/${j.id}`} className="font-mono font-medium hover:text-primary">{j.job_code}</Link>
+                          </TableCell>
+                          <TableCell>{(j.customers as { name: string } | null)?.name ?? "-"}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={JOB_STATUS_COLOR[j.status as JobStatus]}>{JOB_STATUS_LABEL[j.status as JobStatus]}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={PRIORITY_COLOR[j.priority as PriorityLevel]}>{PRIORITY_LABEL[j.priority as PriorityLevel]}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">{j.quantity}</TableCell>
+                          <TableCell className="text-right tabular-nums">{formatBaht(fin.net)}</TableCell>
+                          <TableCell className="text-right tabular-nums text-rose-400">
+                            {fin.hasCost ? formatBaht(fin.totalCost) : <span className="text-muted-foreground">—</span>}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {fin.hasCost ? (
+                              <div className="flex flex-col items-end leading-tight">
+                                <span className={`font-semibold ${fin.profit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                                  {fin.profit < 0 ? "-" : ""}{formatBaht(Math.abs(fin.profit))}
+                                </span>
+                                <span className={`text-[11px] ${fin.margin >= 20 ? "text-emerald-400" : fin.margin >= 0 ? "text-amber-400" : "text-rose-400"}`}>
+                                  {fin.margin.toFixed(0)}%
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">ยังไม่ใส่ต้นทุน</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {j.due_date ? (
+                              <span className={`inline-flex items-center gap-1 ${isOverdue ? "font-medium text-destructive" : "text-muted-foreground"}`}>
+                                {isOverdue && <AlertTriangle className="h-3 w-3" />}
+                                {formatDateTH(j.due_date, "d MMM yy")}
+                              </span>
+                            ) : <span className="text-muted-foreground">-</span>}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </>
