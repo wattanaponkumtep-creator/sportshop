@@ -182,8 +182,9 @@ export function FactoryPayablesView({
       <div className="flex items-start gap-2 rounded-lg border border-border bg-card/40 p-3 text-xs text-muted-foreground">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
         <span>
-          งานที่สถานะ &quot;ส่งโรงงานแล้ว&quot; ขึ้นไป (และมีต้นทุนโรงงาน &gt; 0) จะแสดงที่นี่ · กด &quot;จ่ายแล้ว&quot;
-          ระบบจะบันทึกเป็นเงินออก (หมวดโรงงาน) ให้อัตโนมัติ → กระแสเงินสดในรายงานการเงินจะอัปเดตตาม
+          แสดงงานที่กำลังผลิต (ส่งโรงงาน → กำลังผลิต → QC → รอจัดส่ง) ที่มีต้นทุน &gt; 0 และยังไม่จ่าย ·
+          เมื่องานขึ้นสถานะ &quot;จัดส่งแล้ว/ปิดงาน&quot; ระบบถือว่าจ่ายค่าผลิตแล้ว จะออกจากลิสต์อัตโนมัติ +
+          บันทึกเป็นเงินออก (หมวดโรงงาน) ให้เอง → กระแสเงินสดในรายงานการเงินอัปเดตตาม
         </span>
       </div>
     </div>

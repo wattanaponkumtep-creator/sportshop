@@ -2,14 +2,13 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { JobStatus } from "@/lib/types/database";
 
-// สถานะที่ถือว่า "ส่งโรงงานแล้ว" ขึ้นไป = ต้องจ่ายค่าผลิต
-export const FACTORY_COMMITTED_STATUSES: JobStatus[] = [
+// สถานะ "กำลังผลิต" — ส่งโรงงานแล้วแต่ยังไม่จัดส่ง = ต้องเตรียมเงินจ่ายค่าผลิต
+// เมื่อขึ้น "จัดส่งแล้ว (shipped) / ปิดงาน (completed)" = จ่ายค่าผลิตแล้ว → ออกจากลิสต์
+export const FACTORY_TO_PAY_STATUSES: JobStatus[] = [
   "sent_to_factory",
   "producing",
   "qc",
   "ready_to_ship",
-  "shipped",
-  "completed",
 ];
 
 type PayableJobRow = {
@@ -58,7 +57,7 @@ export async function getFactoryPayables() {
     .select(
       "id, job_code, job_label, status, cost, due_date, updated_at, factory_cost_paid_at, factory_id, customers(name), factories(name)",
     )
-    .in("status", FACTORY_COMMITTED_STATUSES)
+    .in("status", FACTORY_TO_PAY_STATUSES)
     .gt("cost", 0)
     .order("due_date", { ascending: true, nullsFirst: false });
 
