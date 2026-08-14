@@ -94,9 +94,9 @@ export default async function FinanceReportPage({
         </div>
         <WithdrawCalculator
           cashOnHand={cash.cashOnHand}
+          receivable={cash.outstandingReceivable}
           factoryPayable={cash.factoryPayable}
           factoryPayableCount={cash.factoryPayableCount}
-          heldForOpen={cash.heldForOpen}
         />
       </section>
 

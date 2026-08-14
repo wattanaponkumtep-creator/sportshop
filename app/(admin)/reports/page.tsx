@@ -87,12 +87,12 @@ export default async function ReportsPage() {
           <Card className="h-full border-2 border-emerald-500/40 bg-emerald-500/5 transition hover:border-emerald-500/70">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <ArrowDownToLine className="h-4 w-4 text-emerald-400" /> 💸 เอาออกมาใช้ได้
+                <ArrowDownToLine className="h-4 w-4 text-emerald-400" /> 💸 เอาออกได้ (เมื่อเก็บครบ)
               </div>
-              <div className={cn("mt-1 font-display text-2xl font-bold tabular-nums sm:text-3xl", cash.safeAfterFactory >= 0 ? "text-emerald-400" : "text-rose-400")}>
-                {cash.safeAfterFactory < 0 ? "-" : ""}{formatBaht(Math.abs(cash.safeAfterFactory))}
+              <div className={cn("mt-1 font-display text-2xl font-bold tabular-nums sm:text-3xl", cash.projectedAfterCollect >= 0 ? "text-emerald-400" : "text-rose-400")}>
+                {cash.projectedAfterCollect < 0 ? "-" : ""}{formatBaht(Math.abs(cash.projectedAfterCollect))}
               </div>
-              <div className="mt-0.5 text-xs text-muted-foreground">หลังกันค่าผลิต · แตะดูวิธีคิด</div>
+              <div className="mt-0.5 text-xs text-muted-foreground">เงินสด + ค้างเก็บ − ค่าผลิต · แตะดูวิธีคิด</div>
             </CardContent>
           </Card>
         </Link>
