@@ -1,0 +1,194 @@
+"use client";
+import { useState } from "react";
+import Link from "next/link";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ChevronDown, ChevronRight, CircleDollarSign, CircleDashed, CheckCircle2, ExternalLink } from "lucide-react";
+import { JOB_STATUS_LABEL } from "@/lib/constants";
+import { formatBaht, formatDateTH, cn } from "@/lib/utils";
+import type { ReceivableJob } from "@/lib/reports/receivables";
+
+type Totals = {
+  unpaidCount: number;
+  partialCount: number;
+  paidCount: number;
+  unpaidRemaining: number;
+  partialRemaining: number;
+  partialCollected: number;
+  outstandingTotal: number;
+  collectedTotal: number;
+};
+
+export function ReceivablesView({
+  unpaid,
+  partial,
+  paid,
+  totals,
+}: {
+  unpaid: ReceivableJob[];
+  partial: ReceivableJob[];
+  paid: ReceivableJob[];
+  totals: Totals;
+}) {
+  return (
+    <div className="space-y-4">
+      {/* สรุป */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+        <Tile label="ค้างเก็บทั้งหมด" value={formatBaht(totals.outstandingTotal)} tone="text-rose-400" big />
+        <Tile label="ยังไม่ได้เก็บ" value={`${totals.unpaidCount} งาน`} sub={formatBaht(totals.unpaidRemaining)} tone="text-rose-400" />
+        <Tile label="เก็บมัดจำแล้ว" value={`${totals.partialCount} งาน`} sub={`ค้าง ${formatBaht(totals.partialRemaining)}`} tone="text-amber-400" />
+        <Tile label="เก็บครบแล้ว" value={`${totals.paidCount} งาน`} sub={formatBaht(totals.collectedTotal)} tone="text-emerald-400" />
+      </div>
+
+      <Group
+        title="ยังไม่ได้เก็บ"
+        icon={CircleDashed}
+        tone="rose"
+        rows={unpaid}
+        defaultOpen
+        emptyText="ไม่มีงานที่ยังไม่ได้เก็บเงิน 🎉"
+      />
+      <Group
+        title="เก็บมัดจำ / บางส่วน"
+        icon={CircleDollarSign}
+        tone="amber"
+        rows={partial}
+        defaultOpen
+        emptyText="ไม่มีงานที่เก็บมัดจำค้างอยู่"
+      />
+      <Group
+        title="เก็บครบแล้ว"
+        icon={CheckCircle2}
+        tone="emerald"
+        rows={paid}
+        defaultOpen={false}
+        emptyText="ยังไม่มีงานที่เก็บครบ"
+      />
+    </div>
+  );
+}
+
+const TONE = {
+  rose: { text: "text-rose-400", border: "border-rose-500/25", chip: "bg-rose-500/15 text-rose-300" },
+  amber: { text: "text-amber-400", border: "border-amber-500/25", chip: "bg-amber-500/15 text-amber-300" },
+  emerald: { text: "text-emerald-400", border: "border-emerald-500/25", chip: "bg-emerald-500/15 text-emerald-300" },
+} as const;
+
+function Group({
+  title,
+  icon: Icon,
+  tone,
+  rows,
+  defaultOpen,
+  emptyText,
+}: {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  tone: keyof typeof TONE;
+  rows: ReceivableJob[];
+  defaultOpen: boolean;
+  emptyText: string;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const t = TONE[tone];
+  const total = rows.reduce((s, r) => s + (tone === "emerald" ? r.paid : r.remaining), 0);
+
+  return (
+    <Card className={cn("border", t.border)}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 p-4"
+      >
+        <span className="inline-flex items-center gap-2 font-semibold">
+          {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+          <Icon className={cn("h-4 w-4", t.text)} />
+          {title}
+          <Badge variant="outline" className="ml-1">{rows.length} งาน</Badge>
+        </span>
+        <span className={cn("font-mono text-sm font-bold tabular-nums", t.text)}>
+          {tone === "emerald" ? "เก็บแล้ว " : "ค้าง "}{formatBaht(total)}
+        </span>
+      </button>
+
+      {open && (
+        <CardContent className="space-y-1.5 pt-0">
+          {rows.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">{emptyText}</p>
+          ) : (
+            rows.map((r) => <RowItem key={r.id} r={r} tone={tone} />)
+          )}
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
+function RowItem({ r, tone }: { r: ReceivableJob; tone: keyof typeof TONE }) {
+  const t = TONE[tone];
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const overdue = r.dueDate && r.dueDate < todayISO && r.collect !== "paid";
+  const pct = r.net > 0 ? Math.min(100, Math.round((r.paid / r.net) * 100)) : 0;
+
+  return (
+    <Link
+      href={`/jobs/${r.id}`}
+      className="block rounded-md border border-border bg-card/40 p-2.5 transition hover:border-primary/40"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="truncate font-medium">{r.jobLabel || r.jobCode}</span>
+            <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" />
+          </div>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+            <span className="font-mono">{r.jobCode}</span>
+            <span>· {r.customerName}</span>
+            <Badge variant="outline" className="text-[10px]">{JOB_STATUS_LABEL[r.status]}</Badge>
+            {overdue && <span className="font-medium text-rose-400">· เลยกำหนด {formatDateTH(r.dueDate, "d MMM")}</span>}
+          </div>
+        </div>
+        <div className="shrink-0 text-right">
+          {r.collect === "paid" ? (
+            <div className="font-mono text-sm font-semibold tabular-nums text-emerald-400">{formatBaht(r.paid)}</div>
+          ) : (
+            <>
+              <div className={cn("font-mono text-sm font-semibold tabular-nums", t.text)}>
+                ค้าง {formatBaht(r.remaining)}
+              </div>
+              <div className="text-[10px] text-muted-foreground">
+                จาก {formatBaht(r.net)}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* progress bar เก็บเงิน */}
+      {r.collect !== "unpaid" && (
+        <div className="mt-2 flex items-center gap-2">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+            <div
+              className={cn("h-full rounded-full", r.collect === "paid" ? "bg-emerald-500" : "bg-amber-500")}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <span className="shrink-0 text-[10px] text-muted-foreground">
+            เก็บแล้ว {formatBaht(r.paid)} ({pct}%)
+            {r.hasDeposit && r.collect === "partial" && " · มีมัดจำ"}
+          </span>
+        </div>
+      )}
+    </Link>
+  );
+}
+
+function Tile({ label, value, sub, tone, big }: { label: string; value: string; sub?: string; tone: string; big?: boolean }) {
+  return (
+    <div className="rounded-lg bg-card/60 p-3">
+      <div className="text-[11px] text-muted-foreground sm:text-xs">{label}</div>
+      <div className={cn("mt-0.5 font-display font-bold tabular-nums", big ? "text-xl sm:text-2xl" : "text-base sm:text-lg", tone)}>{value}</div>
+      {sub && <div className="text-[11px] text-muted-foreground">{sub}</div>}
+    </div>
+  );
+}

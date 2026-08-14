@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   XCircle,
   ArrowDownToLine,
+  CircleDollarSign,
 } from "lucide-react";
 import { getReportData, pctChange, formatPct } from "@/lib/reports/queries";
 import { getCashPosition } from "@/lib/reports/cash-position";
@@ -64,6 +65,12 @@ export default async function ReportsPage() {
             {cash.factoryPayable > 0 && (
               <span className="rounded bg-white/25 px-1.5 py-0.5 text-xs tabular-nums">{formatBaht(cash.factoryPayable)}</span>
             )}
+          </Link>
+          <Link
+            href="/reports/receivables"
+            className="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-rose-500 to-pink-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:shadow-rose-500/40"
+          >
+            <CircleDollarSign className="h-4 w-4" /> การเก็บเงินลูกค้า
           </Link>
           <Link
             href="/reports/finance"
@@ -310,6 +317,12 @@ export default async function ReportsPage() {
       {/* 5. เงินรอเก็บ + อายุหนี้         */}
       {/* ============================== */}
       <Section title="เงินค้างชำระ" subtitle="แยกตามอายุหนี้ + ลูกค้าที่ค้างมากที่สุด">
+        <Link
+          href="/reports/receivables"
+          className="inline-flex items-center gap-1.5 rounded-md border border-rose-500/30 bg-rose-500/5 px-3 py-1.5 text-sm text-rose-300 transition hover:border-rose-500/60"
+        >
+          <CircleDollarSign className="h-4 w-4" /> ดูแยกตามงาน — ยังไม่เก็บ / เก็บมัดจำ / เก็บครบ →
+        </Link>
         <div className="grid gap-4 lg:grid-cols-2">
           <AgingCard
             total={data.outstanding.total}
