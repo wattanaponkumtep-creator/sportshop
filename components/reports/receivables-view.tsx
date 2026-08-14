@@ -30,14 +30,20 @@ export function ReceivablesView({
   paid: ReceivableJob[];
   totals: Totals;
 }) {
+  const paidFullTotal = paid.reduce((s, r) => s + r.paid, 0);
   return (
     <div className="space-y-4">
       {/* สรุป */}
       <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
-        <Tile label="ค้างเก็บทั้งหมด" value={formatBaht(totals.outstandingTotal)} tone="text-rose-400" big />
-        <Tile label="ยังไม่ได้เก็บ" value={`${totals.unpaidCount} งาน`} sub={formatBaht(totals.unpaidRemaining)} tone="text-rose-400" />
-        <Tile label="เก็บมัดจำแล้ว" value={`${totals.partialCount} งาน`} sub={`ค้าง ${formatBaht(totals.partialRemaining)}`} tone="text-amber-400" />
-        <Tile label="เก็บครบแล้ว" value={`${totals.paidCount} งาน`} sub={formatBaht(totals.collectedTotal)} tone="text-emerald-400" />
+        <Tile label="ค้างเก็บทั้งหมด" value={formatBaht(totals.outstandingTotal)} sub={`ยังไม่เก็บ ${totals.unpaidCount} · มัดจำ ${totals.partialCount} งาน`} tone="text-rose-400" big />
+        <Tile label="ยังไม่ได้เก็บ" value={`${totals.unpaidCount} งาน`} sub={`ค้าง ${formatBaht(totals.unpaidRemaining)}`} tone="text-rose-400" />
+        <Tile
+          label={`เก็บมัดจำแล้ว (${totals.partialCount} งาน)`}
+          value={formatBaht(totals.partialCollected)}
+          sub={`ค้างอีก ${formatBaht(totals.partialRemaining)}`}
+          tone="text-emerald-400"
+        />
+        <Tile label={`เก็บครบแล้ว (${totals.paidCount} งาน)`} value={formatBaht(paidFullTotal)} sub={`รวมเก็บได้ทุกงาน ${formatBaht(totals.collectedTotal)}`} tone="text-emerald-400" />
       </div>
 
       <Group
@@ -91,14 +97,15 @@ function Group({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const t = TONE[tone];
-  const total = rows.reduce((s, r) => s + (tone === "emerald" ? r.paid : r.remaining), 0);
+  const collectedSum = rows.reduce((s, r) => s + r.paid, 0);
+  const remainingSum = rows.reduce((s, r) => s + r.remaining, 0);
 
   return (
     <Card className={cn("border", t.border)}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-2 p-4"
+        className="flex w-full items-center justify-between gap-2 p-4 text-left"
       >
         <span className="inline-flex items-center gap-2 font-semibold">
           {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
@@ -106,8 +113,18 @@ function Group({
           {title}
           <Badge variant="outline" className="ml-1">{rows.length} งาน</Badge>
         </span>
-        <span className={cn("font-mono text-sm font-bold tabular-nums", t.text)}>
-          {tone === "emerald" ? "เก็บแล้ว " : "ค้าง "}{formatBaht(total)}
+        <span className="shrink-0 text-right font-mono text-sm tabular-nums">
+          {tone === "emerald" ? (
+            <span className="font-bold text-emerald-400">เก็บแล้ว {formatBaht(collectedSum)}</span>
+          ) : tone === "amber" ? (
+            <span>
+              <span className="font-bold text-emerald-400">เก็บแล้ว {formatBaht(collectedSum)}</span>
+              <span className="text-muted-foreground"> · </span>
+              <span className="font-bold text-amber-400">ค้าง {formatBaht(remainingSum)}</span>
+            </span>
+          ) : (
+            <span className="font-bold text-rose-400">ค้าง {formatBaht(remainingSum)}</span>
+          )}
         </span>
       </button>
 
