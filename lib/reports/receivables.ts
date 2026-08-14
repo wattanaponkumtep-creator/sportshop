@@ -16,6 +16,7 @@ export type ReceivableJob = {
   remaining: number;// ค้างเก็บ
   hasDeposit: boolean;
   collect: CollectStatus;
+  factoryCost: number;     // ต้นทุนโรงงานของงานนี้
   factoryHasCost: boolean; // งานนี้มีต้นทุนโรงงานไหม
   factoryPaid: boolean;    // จ่ายค่าผลิตให้โรงงานแล้วหรือยัง
 };
@@ -80,7 +81,8 @@ export async function getReceivables() {
     else collect = "paid";
 
     // จ่ายโรงงานแล้ว = ติ๊กจ่ายไว้ หรือ งานส่ง/ปิดแล้ว (ตามตรรกะ factory payables)
-    const factoryHasCost = Number(j.cost ?? 0) > 0;
+    const factoryCost = Number(j.cost ?? 0);
+    const factoryHasCost = factoryCost > 0;
     const factoryPaid = !!j.factory_cost_paid_at || j.status === "shipped" || j.status === "completed";
 
     const row: ReceivableJob = {
@@ -95,6 +97,7 @@ export async function getReceivables() {
       remaining,
       hasDeposit,
       collect,
+      factoryCost,
       factoryHasCost,
       factoryPaid,
     };
@@ -108,8 +111,12 @@ export async function getReceivables() {
   unpaid.sort((a, b) => b.remaining - a.remaining);
   partial.sort((a, b) => b.remaining - a.remaining);
 
-  const sum = (arr: ReceivableJob[], key: "net" | "paid" | "remaining") =>
+  const sum = (arr: ReceivableJob[], key: "net" | "paid" | "remaining" | "factoryCost") =>
     arr.reduce((s, r) => s + r[key], 0);
+
+  // เงินที่ต้องกันไว้จ่ายโรงงาน — เฉพาะงานที่ลูกค้าจ่ายเงินมาแล้ว (มัดจำ/ครบ) และยังไม่จ่ายโรงงาน
+  const reserveJobs = [...partial, ...paidList].filter((r) => r.factoryHasCost && !r.factoryPaid);
+  const factoryReserveFromCollected = reserveJobs.reduce((s, r) => s + r.factoryCost, 0);
 
   return {
     unpaid,
@@ -124,6 +131,8 @@ export async function getReceivables() {
       partialCollected: sum(partial, "paid"),
       outstandingTotal: sum(unpaid, "remaining") + sum(partial, "remaining"),
       collectedTotal: sum(paidList, "paid") + sum(partial, "paid"),
+      factoryReserveFromCollected,
+      factoryReserveCount: reserveJobs.length,
     },
   };
 }

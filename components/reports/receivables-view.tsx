@@ -17,6 +17,8 @@ type Totals = {
   partialCollected: number;
   outstandingTotal: number;
   collectedTotal: number;
+  factoryReserveFromCollected: number;
+  factoryReserveCount: number;
 };
 
 export function ReceivablesView({
@@ -37,29 +39,44 @@ export function ReceivablesView({
   const paidButFactoryUnpaid = paid.filter((r) => r.factoryHasCost && !r.factoryPaid);
   return (
     <div className="space-y-4">
-      {/* แถบสรุป: เก็บได้จริง vs ค้างเก็บ */}
+      {/* แถบสรุป 3 ก้อน: เก็บได้แล้ว · ต้องกันจ่ายโรงงาน · ค้างเก็บ */}
       <Card>
-        <CardContent className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:p-5">
+        <CardContent className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-3 sm:p-5">
           <div className="sm:border-r sm:border-border sm:pr-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" /> 💵 เก็บเงินได้จริงแล้ว
+              <CheckCircle2 className="h-4 w-4 text-emerald-400" /> 💵 รวมเก็บเงินได้แล้ว
             </div>
-            <div className="mt-1 font-display text-3xl font-bold tabular-nums text-emerald-400 sm:text-4xl">
+            <div className="mt-1 font-display text-2xl font-bold tabular-nums text-emerald-400 sm:text-3xl">
               {formatBaht(totals.collectedTotal)}
             </div>
-            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+            <div className="mt-1.5 flex flex-col gap-0.5 text-xs text-muted-foreground">
               <span>มัดจำ (บางส่วน) <span className="font-medium text-foreground">{formatBaht(totals.partialCollected)}</span></span>
-              <span>เต็มจำนวน <span className="font-medium text-foreground">{formatBaht(paidFullTotal)}</span></span>
+              <span>จ่ายเต็ม/ครบแล้ว <span className="font-medium text-foreground">{formatBaht(paidFullTotal)}</span></span>
             </div>
           </div>
+
+          <div className="sm:border-r sm:border-border sm:pr-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Factory className="h-4 w-4 text-amber-400" /> 🏭 ต้องกันไว้จ่ายโรงงาน
+            </div>
+            <div className="mt-1 font-display text-2xl font-bold tabular-nums text-amber-400 sm:text-3xl">
+              {formatBaht(totals.factoryReserveFromCollected)}
+            </div>
+            <div className="mt-1.5 text-xs text-muted-foreground">
+              เฉพาะงานที่ลูกค้าจ่ายมาแล้ว · {totals.factoryReserveCount} งาน
+              <br />
+              <span className="text-amber-300/80">กันจากเงินที่เก็บได้ ยังไม่ใช่กำไร</span>
+            </div>
+          </div>
+
           <div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <CircleDashed className="h-4 w-4 text-rose-400" /> ⏳ ยังค้างเก็บอีก
             </div>
-            <div className="mt-1 font-display text-3xl font-bold tabular-nums text-rose-400 sm:text-4xl">
+            <div className="mt-1 font-display text-2xl font-bold tabular-nums text-rose-400 sm:text-3xl">
               {formatBaht(totals.outstandingTotal)}
             </div>
-            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+            <div className="mt-1.5 flex flex-col gap-0.5 text-xs text-muted-foreground">
               <span>ยังไม่เก็บ <span className="font-medium text-foreground">{formatBaht(totals.unpaidRemaining)}</span></span>
               <span>มัดจำค้าง <span className="font-medium text-foreground">{formatBaht(totals.partialRemaining)}</span></span>
             </div>
