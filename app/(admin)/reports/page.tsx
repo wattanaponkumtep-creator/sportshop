@@ -21,6 +21,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { getReportData, pctChange, formatPct } from "@/lib/reports/queries";
+import { getFactoryPayables } from "@/lib/reports/factory-payables";
 import { formatBaht, cn } from "@/lib/utils";
 import { BarChart } from "@/components/reports/bar-chart";
 import { StatusDistribution } from "@/components/reports/status-distribution";
@@ -31,7 +32,7 @@ import { JobProfitSection } from "@/components/reports/job-profit-section";
 export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {
-  const data = await getReportData();
+  const [data, payables] = await Promise.all([getReportData(), getFactoryPayables()]);
 
   const revChange = pctChange(data.thisMonth.revenue, data.lastMonth.revenue);
   const profitChange = pctChange(data.thisMonth.profit, data.lastMonth.profit);
@@ -53,13 +54,48 @@ export default async function ReportsPage() {
             ภาพรวมยอดขาย กำไร เงินสด และผลการดำเนินงาน — ข้อมูล 6 เดือนล่าสุด
           </p>
         </div>
-        <Link
-          href="/reports/finance"
-          className="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-emerald-500 to-cyan-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition hover:shadow-emerald-500/40"
-        >
-          <Wallet className="h-4 w-4" /> รายงานการเงิน (เงินเข้า-ออก)
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/reports/factory-payables"
+            className="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-amber-500/20 transition hover:shadow-amber-500/40"
+          >
+            <Factory className="h-4 w-4" /> ค่าผลิตที่ต้องจ่าย
+            {payables.grandTotal > 0 && (
+              <span className="rounded bg-white/25 px-1.5 py-0.5 text-xs tabular-nums">{formatBaht(payables.grandTotal)}</span>
+            )}
+          </Link>
+          <Link
+            href="/reports/finance"
+            className="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-emerald-500 to-cyan-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/20 transition hover:shadow-emerald-500/40"
+          >
+            <Wallet className="h-4 w-4" /> รายงานการเงิน (เงินเข้า-ออก)
+          </Link>
+        </div>
       </header>
+
+      {/* ค่าผลิตที่ต้องเตรียมจ่ายโรงงาน */}
+      {payables.grandTotal > 0 && (
+        <Link href="/reports/factory-payables" className="block">
+          <Card className="border-2 border-amber-500/30 bg-amber-500/5 transition hover:border-amber-500/60">
+            <CardContent className="flex items-center justify-between gap-3 p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-amber-500/15">
+                  <Factory className="h-6 w-6 text-amber-400" />
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">💰 เงินที่ต้องเตรียมจ่ายโรงงาน</div>
+                  <div className="text-xs text-muted-foreground">
+                    {payables.unpaidCount} งานที่ส่งโรงงานแล้ว · {payables.groups.length} โรงงาน — แตะเพื่อจัดการ
+                  </div>
+                </div>
+              </div>
+              <div className="font-display text-2xl font-bold tabular-nums text-amber-400 sm:text-3xl">
+                {formatBaht(payables.grandTotal)}
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      )}
 
       {/* ============================== */}
       {/* 1. ภาพรวมเดือนนี้ (KPIs)         */}

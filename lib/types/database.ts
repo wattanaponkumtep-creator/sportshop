@@ -225,6 +225,7 @@ export interface Job {
   job_label: string | null;
   delivery_address: string | null;
   production_options: string[];
+  factory_cost_paid_at: string | null;
 }
 
 export interface JobItem {

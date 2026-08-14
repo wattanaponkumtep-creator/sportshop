@@ -2557,3 +2557,12 @@ begin
 end $$;
 
 grant execute on function public.get_mockup_for_approval(text) to anon, authenticated;
+
+
+-- =========================================================================
+-- ==================== 0029_factory_cost_paid.sql ====================
+-- =========================================================================
+alter table public.jobs
+  add column if not exists factory_cost_paid_at timestamptz;
+create index if not exists jobs_factory_cost_paid_idx
+  on public.jobs(factory_cost_paid_at);
