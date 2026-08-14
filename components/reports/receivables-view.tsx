@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, ChevronRight, CircleDollarSign, CircleDashed, CheckCircle2, ExternalLink } from "lucide-react";
+import { ChevronDown, ChevronRight, CircleDollarSign, CircleDashed, CheckCircle2, ExternalLink, Factory, AlertTriangle } from "lucide-react";
 import { JOB_STATUS_LABEL } from "@/lib/constants";
 import { formatBaht, formatDateTH, cn } from "@/lib/utils";
 import type { ReceivableJob } from "@/lib/reports/receivables";
@@ -33,6 +33,8 @@ export function ReceivablesView({
   const paidFullTotal = paid.reduce((s, r) => s + r.paid, 0);
   const fullNoDeposit = paid.filter((r) => !r.hasDeposit); // จ่ายเต็มเลย ไม่มัดจำ
   const fullWithDeposit = paid.filter((r) => r.hasDeposit); // มัดจำแล้วจ่ายครบ
+  // เก็บครบจากลูกค้าแล้ว แต่ยังไม่จ่ายโรงงาน — เงินก้อนนี้ยังต้องกันไว้จ่ายค่าผลิต
+  const paidButFactoryUnpaid = paid.filter((r) => r.factoryHasCost && !r.factoryPaid);
   return (
     <div className="space-y-4">
       {/* แถบสรุป: เก็บได้จริง vs ค้างเก็บ */}
@@ -99,6 +101,16 @@ export function ReceivablesView({
         defaultOpen
         emptyText="ไม่มีงานที่เก็บมัดจำค้างอยู่"
       />
+      {paidButFactoryUnpaid.length > 0 && (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+          <span>
+            <span className="font-medium text-amber-300">{paidButFactoryUnpaid.length} งาน</span> เก็บเงินครบจากลูกค้าแล้ว
+            แต่<span className="font-medium">ยังไม่ได้จ่ายค่าผลิตให้โรงงาน</span> — เงินก้อนนี้ต้องกันไว้จ่ายโรงงานก่อน ยังไม่ใช่กำไรเต็ม
+          </span>
+        </div>
+      )}
+
       <Group
         title="เก็บครบแล้ว"
         icon={CheckCircle2}
@@ -205,6 +217,15 @@ function RowItem({ r, tone }: { r: ReceivableJob; tone: keyof typeof TONE }) {
                 className={cn("text-[10px]", r.hasDeposit ? "border-emerald-500/40 text-emerald-300" : "border-cyan-500/40 text-cyan-300")}
               >
                 {r.hasDeposit ? "มัดจำ→จ่ายครบ" : "จ่ายเต็มเลย"}
+              </Badge>
+            )}
+            {r.factoryHasCost && (
+              <Badge
+                variant="outline"
+                className={cn("text-[10px]", r.factoryPaid ? "border-emerald-500/40 text-emerald-300" : "border-amber-500/40 text-amber-300")}
+              >
+                <Factory className="mr-0.5 h-2.5 w-2.5" />
+                {r.factoryPaid ? "จ่ายโรงงานแล้ว" : "ยังไม่จ่ายโรงงาน"}
               </Badge>
             )}
             {overdue && <span className="font-medium text-rose-400">· เลยกำหนด {formatDateTH(r.dueDate, "d MMM")}</span>}

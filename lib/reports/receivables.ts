@@ -16,6 +16,8 @@ export type ReceivableJob = {
   remaining: number;// ค้างเก็บ
   hasDeposit: boolean;
   collect: CollectStatus;
+  factoryHasCost: boolean; // งานนี้มีต้นทุนโรงงานไหม
+  factoryPaid: boolean;    // จ่ายค่าผลิตให้โรงงานแล้วหรือยัง
 };
 
 type JobRow = {
@@ -25,6 +27,8 @@ type JobRow = {
   status: JobStatus;
   sale_price: number;
   discount: number;
+  cost: number;
+  factory_cost_paid_at: string | null;
   due_date: string | null;
   customers: { name: string } | { name: string }[] | null;
 };
@@ -41,7 +45,7 @@ export async function getReceivables() {
   const [{ data: jobs }, { data: payments }] = await Promise.all([
     supabase
       .from("jobs")
-      .select("id, job_code, job_label, status, sale_price, discount, due_date, customers(name)")
+      .select("id, job_code, job_label, status, sale_price, discount, cost, factory_cost_paid_at, due_date, customers(name)")
       .neq("status", "cancelled")
       .order("due_date", { ascending: true, nullsFirst: false }),
     supabase.from("payments").select("job_id, type, amount"),
@@ -75,6 +79,10 @@ export async function getReceivables() {
     else if (paid < net) collect = "partial";
     else collect = "paid";
 
+    // จ่ายโรงงานแล้ว = ติ๊กจ่ายไว้ หรือ งานส่ง/ปิดแล้ว (ตามตรรกะ factory payables)
+    const factoryHasCost = Number(j.cost ?? 0) > 0;
+    const factoryPaid = !!j.factory_cost_paid_at || j.status === "shipped" || j.status === "completed";
+
     const row: ReceivableJob = {
       id: j.id,
       jobCode: j.job_code,
@@ -87,6 +95,8 @@ export async function getReceivables() {
       remaining,
       hasDeposit,
       collect,
+      factoryHasCost,
+      factoryPaid,
     };
 
     if (collect === "unpaid") unpaid.push(row);
