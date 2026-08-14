@@ -31,6 +31,8 @@ export function ReceivablesView({
   totals: Totals;
 }) {
   const paidFullTotal = paid.reduce((s, r) => s + r.paid, 0);
+  const fullNoDeposit = paid.filter((r) => !r.hasDeposit); // จ่ายเต็มเลย ไม่มัดจำ
+  const fullWithDeposit = paid.filter((r) => r.hasDeposit); // มัดจำแล้วจ่ายครบ
   return (
     <div className="space-y-4">
       {/* แถบสรุป: เก็บได้จริง vs ค้างเก็บ */}
@@ -73,7 +75,12 @@ export function ReceivablesView({
           sub={`ค้างอีก ${formatBaht(totals.partialRemaining)}`}
           tone="text-emerald-400"
         />
-        <Tile label={`เก็บครบแล้ว (${totals.paidCount} งาน)`} value={formatBaht(paidFullTotal)} sub={`รวมเก็บได้ทุกงาน ${formatBaht(totals.collectedTotal)}`} tone="text-emerald-400" />
+        <Tile
+          label={`เก็บครบแล้ว (${totals.paidCount} งาน)`}
+          value={formatBaht(paidFullTotal)}
+          sub={`จ่ายเต็มเลย ${fullNoDeposit.length} · มัดจำ→ครบ ${fullWithDeposit.length} งาน`}
+          tone="text-emerald-400"
+        />
       </div>
 
       <Group
@@ -97,7 +104,7 @@ export function ReceivablesView({
         icon={CheckCircle2}
         tone="emerald"
         rows={paid}
-        defaultOpen={false}
+        defaultOpen
         emptyText="ยังไม่มีงานที่เก็บครบ"
       />
     </div>
@@ -192,6 +199,14 @@ function RowItem({ r, tone }: { r: ReceivableJob; tone: keyof typeof TONE }) {
             <span className="font-mono">{r.jobCode}</span>
             <span>· {r.customerName}</span>
             <Badge variant="outline" className="text-[10px]">{JOB_STATUS_LABEL[r.status]}</Badge>
+            {r.collect === "paid" && (
+              <Badge
+                variant="outline"
+                className={cn("text-[10px]", r.hasDeposit ? "border-emerald-500/40 text-emerald-300" : "border-cyan-500/40 text-cyan-300")}
+              >
+                {r.hasDeposit ? "มัดจำ→จ่ายครบ" : "จ่ายเต็มเลย"}
+              </Badge>
+            )}
             {overdue && <span className="font-medium text-rose-400">· เลยกำหนด {formatDateTH(r.dueDate, "d MMM")}</span>}
           </div>
         </div>
