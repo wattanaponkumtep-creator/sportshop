@@ -33,6 +33,36 @@ export function ReceivablesView({
   const paidFullTotal = paid.reduce((s, r) => s + r.paid, 0);
   return (
     <div className="space-y-4">
+      {/* แถบสรุป: เก็บได้จริง vs ค้างเก็บ */}
+      <Card>
+        <CardContent className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 sm:p-5">
+          <div className="sm:border-r sm:border-border sm:pr-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400" /> 💵 เก็บเงินได้จริงแล้ว
+            </div>
+            <div className="mt-1 font-display text-3xl font-bold tabular-nums text-emerald-400 sm:text-4xl">
+              {formatBaht(totals.collectedTotal)}
+            </div>
+            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+              <span>มัดจำ (บางส่วน) <span className="font-medium text-foreground">{formatBaht(totals.partialCollected)}</span></span>
+              <span>เต็มจำนวน <span className="font-medium text-foreground">{formatBaht(paidFullTotal)}</span></span>
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <CircleDashed className="h-4 w-4 text-rose-400" /> ⏳ ยังค้างเก็บอีก
+            </div>
+            <div className="mt-1 font-display text-3xl font-bold tabular-nums text-rose-400 sm:text-4xl">
+              {formatBaht(totals.outstandingTotal)}
+            </div>
+            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+              <span>ยังไม่เก็บ <span className="font-medium text-foreground">{formatBaht(totals.unpaidRemaining)}</span></span>
+              <span>มัดจำค้าง <span className="font-medium text-foreground">{formatBaht(totals.partialRemaining)}</span></span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* สรุป */}
       <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         <Tile label="ค้างเก็บทั้งหมด" value={formatBaht(totals.outstandingTotal)} sub={`ยังไม่เก็บ ${totals.unpaidCount} · มัดจำ ${totals.partialCount} งาน`} tone="text-rose-400" big />
