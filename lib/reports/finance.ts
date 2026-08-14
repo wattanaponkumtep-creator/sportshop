@@ -222,6 +222,34 @@ export async function getFinanceData(range: FinanceRange = "this_month") {
     unpaidAmount,
   };
 
+  // ---------- เงินรับจากลูกค้า (แยกมัดจำ) ----------
+  // ในช่วงที่เลือก
+  const depositInRange = rangedPayments.filter((p) => p.type === "deposit").reduce((s, p) => s + Number(p.amount), 0);
+  const fullInRange = rangedPayments.filter((p) => p.type === "full").reduce((s, p) => s + Number(p.amount), 0);
+  const refundInRange = rangedPayments.filter((p) => p.type === "refund").reduce((s, p) => s + Number(p.amount), 0);
+
+  // Snapshot: เงินลูกค้าที่ถือไว้ของงานที่ยังไม่ปิด (completed/cancelled = ปิดแล้ว)
+  const openIds = new Set(open.map((j) => j.id));
+  let heldForOpen = 0;
+  let depositsHeldOpen = 0;
+  for (const p of (allPaymentsForOutstanding ?? []) as { job_id: string; type: string; amount: number }[]) {
+    if (!openIds.has(p.job_id)) continue;
+    if (p.type === "refund") heldForOpen -= Number(p.amount);
+    else {
+      heldForOpen += Number(p.amount);
+      if (p.type === "deposit") depositsHeldOpen += Number(p.amount);
+    }
+  }
+
+  const customerMoney = {
+    depositInRange,
+    fullInRange,
+    refundInRange,
+    receivedNet: depositInRange + fullInRange - refundInRange,
+    heldForOpen,          // เงินลูกค้าของงานที่ยังไม่ปิด (ยังไม่ใช่กำไร)
+    depositsHeldOpen,     // เฉพาะมัดจำของงานที่ยังไม่ปิด
+  };
+
   return {
     range,
     rangeLabel: r.label,
@@ -241,6 +269,7 @@ export async function getFinanceData(range: FinanceRange = "this_month") {
     expenseByCategory,
     incomeByType,
     jobBreakdown,
+    customerMoney,
     pending,
     recentExpenses: (recentExpenses ?? []) as Expense[],
   };

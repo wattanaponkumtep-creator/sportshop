@@ -73,28 +73,54 @@ export default async function ReportsPage() {
         </div>
       </header>
 
-      {/* ค่าผลิตที่ต้องเตรียมจ่ายโรงงาน */}
-      {payables.grandTotal > 0 && (
-        <Link href="/reports/factory-payables" className="block">
-          <Card className="border-2 border-amber-500/30 bg-amber-500/5 transition hover:border-amber-500/60">
-            <CardContent className="flex items-center justify-between gap-3 p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-amber-500/15">
-                  <Factory className="h-6 w-6 text-amber-400" />
-                </div>
-                <div>
-                  <div className="text-sm text-muted-foreground">💰 เงินที่ต้องเตรียมจ่ายโรงงาน</div>
-                  <div className="text-xs text-muted-foreground">
-                    {payables.unpaidCount} งานที่ส่งโรงงานแล้ว · {payables.groups.length} โรงงาน — แตะเพื่อจัดการ
+      {/* กระเป๋าเงิน: ต้องจ่ายออก vs เงินลูกค้าถือไว้ (ยังไม่ใช่กำไร) */}
+      {(payables.grandTotal > 0 || data.customerHeld > 0) && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {payables.grandTotal > 0 && (
+            <Link href="/reports/factory-payables" className="block">
+              <Card className="h-full border-2 border-amber-500/30 bg-amber-500/5 transition hover:border-amber-500/60">
+                <CardContent className="flex items-center justify-between gap-3 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-amber-500/15">
+                      <Factory className="h-6 w-6 text-amber-400" />
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">💰 ต้องเตรียมจ่ายโรงงาน</div>
+                      <div className="text-xs text-muted-foreground">
+                        {payables.unpaidCount} งาน · {payables.groups.length} โรงงาน — แตะจัดการ
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-              <div className="font-display text-2xl font-bold tabular-nums text-amber-400 sm:text-3xl">
-                {formatBaht(payables.grandTotal)}
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
+                  <div className="font-display text-2xl font-bold tabular-nums text-amber-400">
+                    {formatBaht(payables.grandTotal)}
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
+          {data.customerHeld > 0 && (
+            <Link href="/reports/finance" className="block">
+              <Card className="h-full border-2 border-cyan-500/30 bg-cyan-500/5 transition hover:border-cyan-500/60">
+                <CardContent className="flex items-center justify-between gap-3 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-cyan-500/15">
+                      <HandCoins className="h-6 w-6 text-cyan-400" />
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">🔒 เงินลูกค้าถือไว้ (งานยังไม่ปิด)</div>
+                      <div className="text-xs text-muted-foreground">
+                        รับแล้วแต่ยังไม่ปิดงาน — ยังไม่ใช่กำไร
+                      </div>
+                    </div>
+                  </div>
+                  <div className="font-display text-2xl font-bold tabular-nums text-cyan-400">
+                    {formatBaht(data.customerHeld)}
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
+        </div>
       )}
 
       {/* ============================== */}

@@ -282,6 +282,21 @@ export async function getReportData() {
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5);
 
+  // ---------- เงินลูกค้าที่ถือไว้ (งานยังไม่ปิด = ยังไม่ใช่กำไร) ----------
+  const openHeldIds = new Set(
+    allJobs.filter((j) => j.status !== "completed" && j.status !== "cancelled").map((j) => j.id),
+  );
+  let customerHeld = 0;
+  let depositsThisMonth = 0;
+  for (const p of allPayments) {
+    if (openHeldIds.has(p.job_id)) {
+      customerHeld += p.type === "refund" ? -Number(p.amount) : Number(p.amount);
+    }
+    if (p.type === "deposit" && p.paid_at >= thisMonthBounds.start && p.paid_at < thisMonthBounds.end) {
+      depositsThisMonth += Number(p.amount);
+    }
+  }
+
   // ---------- Status distribution ----------
   const statusDistribution: Record<JobStatus, number> = {
     received: 0,
@@ -393,6 +408,8 @@ export async function getReportData() {
       aging,
       customers: overdueCustomers,
     },
+    customerHeld,
+    depositsThisMonth,
     statusDistribution,
     topCustomers,
     topCustomersByProfit,

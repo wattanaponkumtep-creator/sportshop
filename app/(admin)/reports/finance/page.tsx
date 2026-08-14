@@ -146,6 +146,47 @@ export default async function FinanceReportPage({
         </div>
       </section>
 
+      {/* ============ 2.5 เงินรับจากลูกค้า (มัดจำ) ============ */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="font-display text-lg font-bold sm:text-xl">💵 เงินรับจากลูกค้า</h2>
+          <p className="text-xs text-muted-foreground">แยกมัดจำ · เพื่อไม่ให้สับสนกับกำไร — {data.rangeLabel}</p>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <BigCard label="มัดจำที่รับ" value={formatBaht(data.customerMoney.depositInRange)} icon={HandCoins} tone="emerald" />
+          <BigCard label="ชำระเต็ม / ที่เหลือ" value={formatBaht(data.customerMoney.fullInRange)} icon={ArrowDownToLine} tone="emerald" />
+          <BigCard
+            label="รวมรับจากลูกค้า (สุทธิ)"
+            value={formatBaht(data.customerMoney.receivedNet)}
+            sub={data.customerMoney.refundInRange > 0 ? `หักคืนเงิน ${formatBaht(data.customerMoney.refundInRange)}` : undefined}
+            icon={Wallet} tone="emerald" highlight
+          />
+        </div>
+
+        {/* Reconciliation: เงินที่ถือไว้ ยังไม่ใช่กำไร */}
+        <Card className="border-2 border-amber-500/30 bg-amber-500/5">
+          <CardContent className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/15">
+                <PiggyBank className="h-5 w-5 text-amber-400" />
+              </div>
+              <div>
+                <div className="text-sm font-medium">🔒 เงินลูกค้าที่ถือไว้ (งานยังไม่ปิด)</div>
+                <div className="text-xs text-muted-foreground">
+                  รับมาแล้วแต่งานยังไม่ปิด — <span className="font-medium text-amber-300">ยังไม่ใช่กำไร</span> ต้องกันไว้จ่ายต้นทุน/ผลิต
+                  {data.customerMoney.depositsHeldOpen > 0 && ` · เป็นมัดจำ ${formatBaht(data.customerMoney.depositsHeldOpen)}`}
+                </div>
+              </div>
+            </div>
+            <div className="shrink-0 text-right">
+              <div className="font-display text-2xl font-bold tabular-nums text-amber-400 sm:text-3xl">
+                {formatBaht(data.customerMoney.heldForOpen)}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
       {/* ============ 3. กำไรขาดทุน (P&L) ============ */}
       <section className="space-y-3">
         <div>
