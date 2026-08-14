@@ -18,6 +18,8 @@ import {
   Truck,
 } from "lucide-react";
 import { getFinanceData } from "@/lib/reports/finance";
+import { getCashPosition } from "@/lib/reports/cash-position";
+import { WithdrawCalculator } from "@/components/reports/withdraw-calculator";
 import { pctChange, formatPct, type FinanceRange } from "@/lib/reports/queries";
 import { formatBaht, cn } from "@/lib/utils";
 import { TrendChart } from "@/components/reports/trend-chart";
@@ -46,7 +48,7 @@ export default async function FinanceReportPage({
     ? rangeParam
     : "this_month") as FinanceRange;
 
-  const data = await getFinanceData(range);
+  const [data, cash] = await Promise.all([getFinanceData(range), getCashPosition()]);
   const s = data.summary;
 
   // For this_month, compute MoM change vs last month
@@ -83,6 +85,20 @@ export default async function FinanceReportPage({
           <FinanceRangeTabs current={range} />
         </div>
       </header>
+
+      {/* ============ 0. เงินที่เอาออกมาใช้ได้ ============ */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="font-display text-lg font-bold sm:text-xl">💸 เงินที่เอาออกมาใช้ได้</h2>
+          <p className="text-xs text-muted-foreground">หลังกันเงินค่าผลิตที่ต้องจ่ายโรงงานไว้แล้ว</p>
+        </div>
+        <WithdrawCalculator
+          cashOnHand={cash.cashOnHand}
+          factoryPayable={cash.factoryPayable}
+          factoryPayableCount={cash.factoryPayableCount}
+          heldForOpen={cash.heldForOpen}
+        />
+      </section>
 
       {/* ============ 1. เอกสารรอดำเนินการ ============ */}
       <section className="space-y-3">

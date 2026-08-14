@@ -19,9 +19,10 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
+  ArrowDownToLine,
 } from "lucide-react";
 import { getReportData, pctChange, formatPct } from "@/lib/reports/queries";
-import { getFactoryPayables } from "@/lib/reports/factory-payables";
+import { getCashPosition } from "@/lib/reports/cash-position";
 import { formatBaht, cn } from "@/lib/utils";
 import { BarChart } from "@/components/reports/bar-chart";
 import { StatusDistribution } from "@/components/reports/status-distribution";
@@ -32,7 +33,7 @@ import { JobProfitSection } from "@/components/reports/job-profit-section";
 export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {
-  const [data, payables] = await Promise.all([getReportData(), getFactoryPayables()]);
+  const [data, cash] = await Promise.all([getReportData(), getCashPosition()]);
 
   const revChange = pctChange(data.thisMonth.revenue, data.lastMonth.revenue);
   const profitChange = pctChange(data.thisMonth.profit, data.lastMonth.profit);
@@ -60,8 +61,8 @@ export default async function ReportsPage() {
             className="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-amber-500/20 transition hover:shadow-amber-500/40"
           >
             <Factory className="h-4 w-4" /> ค่าผลิตที่ต้องจ่าย
-            {payables.grandTotal > 0 && (
-              <span className="rounded bg-white/25 px-1.5 py-0.5 text-xs tabular-nums">{formatBaht(payables.grandTotal)}</span>
+            {cash.factoryPayable > 0 && (
+              <span className="rounded bg-white/25 px-1.5 py-0.5 text-xs tabular-nums">{formatBaht(cash.factoryPayable)}</span>
             )}
           </Link>
           <Link
@@ -73,55 +74,52 @@ export default async function ReportsPage() {
         </div>
       </header>
 
-      {/* กระเป๋าเงิน: ต้องจ่ายออก vs เงินลูกค้าถือไว้ (ยังไม่ใช่กำไร) */}
-      {(payables.grandTotal > 0 || data.customerHeld > 0) && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {payables.grandTotal > 0 && (
-            <Link href="/reports/factory-payables" className="block">
-              <Card className="h-full border-2 border-amber-500/30 bg-amber-500/5 transition hover:border-amber-500/60">
-                <CardContent className="flex items-center justify-between gap-3 p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-amber-500/15">
-                      <Factory className="h-6 w-6 text-amber-400" />
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">💰 ต้องเตรียมจ่ายโรงงาน</div>
-                      <div className="text-xs text-muted-foreground">
-                        {payables.unpaidCount} งาน · {payables.groups.length} โรงงาน — แตะจัดการ
-                      </div>
-                    </div>
-                  </div>
-                  <div className="font-display text-2xl font-bold tabular-nums text-amber-400">
-                    {formatBaht(payables.grandTotal)}
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          )}
-          {data.customerHeld > 0 && (
-            <Link href="/reports/finance" className="block">
-              <Card className="h-full border-2 border-cyan-500/30 bg-cyan-500/5 transition hover:border-cyan-500/60">
-                <CardContent className="flex items-center justify-between gap-3 p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-cyan-500/15">
-                      <HandCoins className="h-6 w-6 text-cyan-400" />
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">🔒 เงินลูกค้าถือไว้ (งานยังไม่ปิด)</div>
-                      <div className="text-xs text-muted-foreground">
-                        รับแล้วแต่ยังไม่ปิดงาน — ยังไม่ใช่กำไร
-                      </div>
-                    </div>
-                  </div>
-                  <div className="font-display text-2xl font-bold tabular-nums text-cyan-400">
-                    {formatBaht(data.customerHeld)}
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          )}
-        </div>
-      )}
+      {/* กระเป๋าเงิน: เอาออกได้ · ต้องจ่ายโรงงาน · ลูกค้าถือไว้ */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Link href="/reports/finance" className="block sm:col-span-1">
+          <Card className="h-full border-2 border-emerald-500/40 bg-emerald-500/5 transition hover:border-emerald-500/70">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <ArrowDownToLine className="h-4 w-4 text-emerald-400" /> 💸 เอาออกมาใช้ได้
+              </div>
+              <div className={cn("mt-1 font-display text-2xl font-bold tabular-nums sm:text-3xl", cash.safeAfterFactory >= 0 ? "text-emerald-400" : "text-rose-400")}>
+                {cash.safeAfterFactory < 0 ? "-" : ""}{formatBaht(Math.abs(cash.safeAfterFactory))}
+              </div>
+              <div className="mt-0.5 text-xs text-muted-foreground">หลังกันค่าผลิต · แตะดูวิธีคิด</div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/reports/factory-payables" className="block">
+          <Card className="h-full border-2 border-amber-500/30 bg-amber-500/5 transition hover:border-amber-500/60">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Factory className="h-4 w-4 text-amber-400" /> 💰 ต้องจ่ายโรงงาน
+              </div>
+              <div className="mt-1 font-display text-2xl font-bold tabular-nums text-amber-400 sm:text-3xl">
+                {formatBaht(cash.factoryPayable)}
+              </div>
+              <div className="mt-0.5 text-xs text-muted-foreground">
+                {cash.factoryPayableCount} งาน · {cash.factoryCount} โรงงาน
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/reports/finance" className="block">
+          <Card className="h-full border-2 border-cyan-500/30 bg-cyan-500/5 transition hover:border-cyan-500/60">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <HandCoins className="h-4 w-4 text-cyan-400" /> 🔒 ลูกค้าถือไว้
+              </div>
+              <div className="mt-1 font-display text-2xl font-bold tabular-nums text-cyan-400 sm:text-3xl">
+                {formatBaht(cash.heldForOpen)}
+              </div>
+              <div className="mt-0.5 text-xs text-muted-foreground">งานยังไม่ปิด — ยังไม่ใช่กำไร</div>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
 
       {/* ============================== */}
       {/* 1. ภาพรวมเดือนนี้ (KPIs)         */}
