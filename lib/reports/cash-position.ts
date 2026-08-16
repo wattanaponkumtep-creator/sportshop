@@ -7,10 +7,11 @@ import type { JobStatus } from "@/lib/types/database";
 export async function getCashPosition() {
   const supabase = await createClient();
 
-  const [{ data: payments }, { data: expenses }, { data: jobs }] = await Promise.all([
+  const [{ data: payments }, { data: expenses }, { data: jobs }, { data: shop }] = await Promise.all([
     supabase.from("payments").select("job_id, type, amount"),
     supabase.from("expenses").select("amount"),
     supabase.from("jobs").select("id, status, sale_price, discount, cost, factory_cost_paid_at, factory_id"),
+    supabase.from("shop_info").select("bank_balance, bank_balance_updated_at").eq("id", 1).maybeSingle(),
   ]);
 
   const pays = (payments ?? []) as { job_id: string; type: string; amount: number }[];
@@ -59,20 +60,31 @@ export async function getCashPosition() {
   const factoryPayableCount = payableJobs.length;
   const factoryCount = new Set(payableJobs.map((j) => j.factory_id ?? "_none")).size;
 
+  // ยอดเงินจริงที่ผู้ใช้บันทึกไว้ (ถ้ามี ใช้แทนค่าประมาณ)
+  const shopRow = (shop ?? null) as { bank_balance: number | null; bank_balance_updated_at: string | null } | null;
+  const savedBalance = shopRow?.bank_balance != null ? Number(shopRow.bank_balance) : null;
+  const savedBalanceAt = shopRow?.bank_balance_updated_at ?? null;
+
+  // เงินสดที่ใช้คำนวณจริง = ยอดที่บันทึกไว้ (ถ้ามี) ไม่งั้นใช้ค่าประมาณจากระบบ
+  const effectiveCash = savedBalance != null ? savedBalance : cashOnHand;
+
   return {
     totalReceived,
     totalPaidOut,
-    cashOnHand,
+    cashOnHand,            // ค่าประมาณจากระบบ (รับ − จ่าย)
+    savedBalance,          // ยอดจริงที่บันทึกไว้ (null ถ้าไม่ได้บันทึก)
+    savedBalanceAt,
+    effectiveCash,         // ยอดที่ใช้คำนวณจริง
     heldForOpen: Math.max(0, heldForOpen),
     outstandingReceivable,
     factoryPayable,
     factoryPayableCount,
     factoryCount,
     // เอาออกได้ทันทีจากเงินสดตอนนี้ (หักค่าผลิต) — อาจติดลบถ้ายังไม่เก็บเงินลูกค้า
-    safeAfterFactory: cashOnHand - factoryPayable,
+    safeAfterFactory: effectiveCash - factoryPayable,
     // เมื่อเก็บเงินลูกค้าครบแล้ว: บวกยอดค้างเก็บเข้าไปด้วย
-    projectedAfterCollect: cashOnHand + outstandingReceivable - factoryPayable,
+    projectedAfterCollect: effectiveCash + outstandingReceivable - factoryPayable,
     // ปลอดภัยสุด: เอาเฉพาะเงินของงานที่ปิดแล้ว (กันเงินลูกค้างานที่ยังไม่ปิดไว้)
-    safeConservative: cashOnHand - Math.max(0, heldForOpen),
+    safeConservative: effectiveCash - Math.max(0, heldForOpen),
   };
 }

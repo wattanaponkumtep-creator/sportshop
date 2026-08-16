@@ -31,7 +31,7 @@ export default async function FactoryPayablesPage() {
         unpaidCount={data.unpaidCount}
         paidRecent={data.paidRecent}
         paidTotal={data.paidTotal}
-        cashOnHand={cash.cashOnHand}
+        cashOnHand={cash.effectiveCash}
         receivable={cash.outstandingReceivable}
       />
     </div>

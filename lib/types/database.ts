@@ -347,6 +347,8 @@ export interface ShopInfo {
   tax_id: string | null;
   bank_info: string | null;
   logo_url: string | null;
+  bank_balance: number | null;
+  bank_balance_updated_at: string | null;
   updated_at: string;
 }
 

@@ -1,28 +1,55 @@
 "use client";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Wallet, Factory, HandCoins, ArrowDownToLine, Info, AlertTriangle } from "lucide-react";
-import { formatBaht, cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Wallet, Factory, HandCoins, ArrowDownToLine, Info, AlertTriangle, Save, Check } from "lucide-react";
+import { formatBaht, formatDateTH, cn } from "@/lib/utils";
+import { toast } from "@/components/ui/use-toast";
+import { saveBankBalance, clearBankBalance } from "@/app/(admin)/reports/cash-actions";
 
 export function WithdrawCalculator({
   cashOnHand,
+  savedBalance,
+  savedBalanceAt,
   receivable,
   factoryPayable,
   factoryPayableCount,
 }: {
   cashOnHand: number;
+  savedBalance: number | null;
+  savedBalanceAt: string | null;
   receivable: number;
   factoryPayable: number;
   factoryPayableCount: number;
 }) {
-  // ให้ผู้ใช้ใส่ยอดเงินในบัญชีจริงได้ (default = ที่ระบบคำนวณ)
-  const [override, setOverride] = useState<string>("");
-  const base = override.trim() === "" ? cashOnHand : Math.max(0, Number(override) || 0);
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  // prefill ด้วยยอดที่บันทึกไว้ (ถ้ามี)
+  const [override, setOverride] = useState<string>(savedBalance != null ? String(savedBalance) : "");
+  const base = override.trim() === "" ? (savedBalance ?? cashOnHand) : Math.max(0, Number(override) || 0);
+  const isSaved = savedBalance != null;
+  const dirty = override.trim() !== "" && Number(override) !== savedBalance;
 
   const projected = base + receivable - factoryPayable; // เมื่อเก็บเงินครบ
   const cashNow = base - factoryPayable;                 // เฉพาะเงินสดตอนนี้
+
+  function handleSave() {
+    startTransition(async () => {
+      const r = await saveBankBalance({ amount: base });
+      if (r.ok) { toast({ title: "บันทึกยอดเงินในบัญชีแล้ว ✓" }); router.refresh(); }
+      else toast({ title: "บันทึกไม่สำเร็จ", description: r.error, variant: "destructive" });
+    });
+  }
+  function handleClear() {
+    startTransition(async () => {
+      const r = await clearBankBalance();
+      if (r.ok) { setOverride(""); toast({ title: "ล้างแล้ว — กลับไปใช้ค่าประมาณจากระบบ" }); router.refresh(); }
+      else toast({ title: "ไม่สำเร็จ", description: r.error, variant: "destructive" });
+    });
+  }
 
   return (
     <div className="space-y-3">
@@ -32,21 +59,38 @@ export function WithdrawCalculator({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <div className="text-sm text-muted-foreground">💵 เงินในบัญชีตอนนี้</div>
-              <div className="mt-0.5 flex items-baseline gap-2">
+              <div className="mt-0.5 flex flex-wrap items-baseline gap-2">
                 <span className="font-display text-2xl font-bold tabular-nums sm:text-3xl">{formatBaht(base)}</span>
-                {override.trim() === "" && <span className="text-xs text-muted-foreground">(ประมาณจากระบบ)</span>}
+                {isSaved ? (
+                  <span className="inline-flex items-center gap-1 text-xs text-emerald-400">
+                    <Check className="h-3 w-3" /> บันทึกไว้
+                    {savedBalanceAt && <span className="text-muted-foreground">· {formatDateTH(savedBalanceAt, "d MMM yy HH:mm")}</span>}
+                  </span>
+                ) : (
+                  <span className="text-xs text-muted-foreground">(ประมาณจากระบบ)</span>
+                )}
               </div>
+              {isSaved && (
+                <button type="button" onClick={handleClear} disabled={isPending} className="mt-1 text-[11px] text-muted-foreground underline-offset-2 hover:underline">
+                  ล้างค่าที่บันทึก (กลับไปใช้ประมาณจากระบบ ฿{Math.round(cashOnHand).toLocaleString()})
+                </button>
+              )}
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">ปรับเป็นยอดจริงในบัญชี (ถ้ารู้)</label>
-              <Input
-                type="number"
-                inputMode="numeric"
-                value={override}
-                onChange={(e) => setOverride(e.target.value)}
-                placeholder={String(Math.round(cashOnHand))}
-                className="h-9 w-full sm:w-44"
-              />
+              <label className="text-xs text-muted-foreground">พิมพ์ยอดจริงในบัญชี แล้วบันทึกไว้</label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  value={override}
+                  onChange={(e) => setOverride(e.target.value)}
+                  placeholder={String(Math.round(cashOnHand))}
+                  className="h-9 w-full sm:w-36"
+                />
+                <Button onClick={handleSave} disabled={isPending || (isSaved && !dirty)} className="h-9 shrink-0">
+                  <Save className="h-4 w-4" /> บันทึก
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
