@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { ArrowLeft, Factory } from "lucide-react";
 import { getFactoryPayables } from "@/lib/reports/factory-payables";
+import { getCashPosition } from "@/lib/reports/cash-position";
 import { FactoryPayablesView } from "@/components/reports/factory-payables-view";
 
 export const dynamic = "force-dynamic";
 
 export default async function FactoryPayablesPage() {
-  const data = await getFactoryPayables();
+  const [data, cash] = await Promise.all([getFactoryPayables(), getCashPosition()]);
 
   return (
     <div className="container max-w-3xl space-y-6 p-3 sm:p-4 md:p-8">
@@ -30,6 +31,8 @@ export default async function FactoryPayablesPage() {
         unpaidCount={data.unpaidCount}
         paidRecent={data.paidRecent}
         paidTotal={data.paidTotal}
+        cashOnHand={cash.cashOnHand}
+        receivable={cash.outstandingReceivable}
       />
     </div>
   );

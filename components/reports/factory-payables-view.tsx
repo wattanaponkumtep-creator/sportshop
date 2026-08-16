@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Factory, Check, Undo2, ChevronDown, ChevronRight, AlertTriangle, CheckCircle2, ExternalLink } from "lucide-react";
+import { Factory, Check, Undo2, ChevronDown, ChevronRight, AlertTriangle, CheckCircle2, ExternalLink, Wallet, CircleDollarSign } from "lucide-react";
 import { JOB_STATUS_LABEL } from "@/lib/constants";
 import { formatBaht, formatDateTH, cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
@@ -27,13 +27,19 @@ export function FactoryPayablesView({
   unpaidCount,
   paidRecent,
   paidTotal,
+  cashOnHand,
+  receivable,
 }: {
   groups: FactoryGroup[];
   grandTotal: number;
   unpaidCount: number;
   paidRecent: PaidRecent[];
   paidTotal: number;
+  cashOnHand: number;
+  receivable: number;
 }) {
+  const cashReady = Math.min(cashOnHand, grandTotal); // เงินสดที่ใช้จ่ายส่วนนี้ได้
+  const shortfall = Math.max(0, grandTotal - cashOnHand); // ยังขาด (ต้องเก็บเงินลูกค้า)
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [showPaid, setShowPaid] = useState(false);
@@ -67,19 +73,55 @@ export function FactoryPayablesView({
 
   return (
     <div className="space-y-5">
-      {/* ยอดที่ต้องเตรียม */}
+      {/* ยอดที่ต้องเตรียม + เงินสดพอไหม */}
       <Card className="border-2 border-amber-500/30 bg-amber-500/5">
-        <CardContent className="flex flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="text-sm text-muted-foreground">💰 เงินที่ต้องเตรียมจ่ายโรงงาน</div>
-            <div className="font-display text-3xl font-bold tabular-nums text-amber-400 sm:text-4xl">
-              {formatBaht(grandTotal)}
+        <CardContent className="space-y-3 p-5">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <div className="text-sm text-muted-foreground">💰 เงินที่ต้องเตรียมจ่ายโรงงาน</div>
+              <div className="font-display text-3xl font-bold tabular-nums text-amber-400 sm:text-4xl">
+                {formatBaht(grandTotal)}
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                จาก {unpaidCount} งานที่ส่งโรงงานแล้ว · {groups.length} โรงงาน
+              </div>
             </div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              จาก {unpaidCount} งานที่ส่งโรงงานแล้ว · {groups.length} โรงงาน
-            </div>
+            <Factory className="hidden h-12 w-12 text-amber-400/40 sm:block" />
           </div>
-          <Factory className="hidden h-12 w-12 text-amber-400/40 sm:block" />
+
+          {grandTotal > 0 && (
+            <div className="space-y-2 border-t border-amber-500/20 pt-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                  <Wallet className="h-4 w-4" /> เงินสดพร้อมจ่าย (ประมาณ)
+                </span>
+                <span className="font-mono tabular-nums text-foreground">{formatBaht(cashOnHand)}</span>
+              </div>
+
+              {shortfall > 0 ? (
+                <>
+                  <div className="flex items-center justify-between rounded-lg border border-rose-500/25 bg-rose-500/5 px-3 py-2 text-sm">
+                    <span className="inline-flex items-center gap-1.5 font-medium text-rose-300">
+                      <AlertTriangle className="h-4 w-4" /> ยังขาดอีก (ต้องเก็บเงินลูกค้าก่อน)
+                    </span>
+                    <span className="font-mono font-bold tabular-nums text-rose-400">{formatBaht(shortfall)}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    <CircleDollarSign className="mr-1 inline h-3 w-3 text-emerald-400" />
+                    ลูกค้ายังค้างจ่าย <span className="font-medium text-emerald-300">{formatBaht(receivable)}</span> —
+                    {receivable >= shortfall ? " เก็บเข้ามาจะพอจ่ายค่าผลิต ✓" : " เก็บครบแล้วยังไม่พอ ต้องหาเงินเพิ่ม ⚠️"}
+                  </p>
+                </>
+              ) : (
+                <div className="flex items-center justify-between rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-3 py-2 text-sm">
+                  <span className="inline-flex items-center gap-1.5 font-medium text-emerald-300">
+                    <CheckCircle2 className="h-4 w-4" /> เงินสดพอจ่ายแล้ว
+                  </span>
+                  <span className="font-mono tabular-nums text-emerald-400">เหลือ {formatBaht(cashOnHand - grandTotal)}</span>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
