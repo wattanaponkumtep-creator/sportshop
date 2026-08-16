@@ -8,6 +8,8 @@ import { KanbanBoard } from "@/components/jobs/kanban-board";
 import { DailyChecklist } from "@/components/admin/daily-checklist";
 import { DailySchedule } from "@/components/admin/daily-schedule";
 import { FollowupSuggestions } from "@/components/admin/followup-suggestions";
+import { BankBalanceCard } from "@/components/admin/bank-balance-card";
+import { getCashPosition } from "@/lib/reports/cash-position";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +18,8 @@ export default async function DashboardPage() {
 
   const todayISO = new Date().toISOString().slice(0, 10);
 
-  const [{ count: jobCount }, { count: customerCount }, { count: factoryCount }, { data: jobs }, { data: mockups }] = await Promise.all([
+  const [cash, { count: jobCount }, { count: customerCount }, { count: factoryCount }, { data: jobs }, { data: mockups }] = await Promise.all([
+    getCashPosition(),
     supabase.from("jobs").select("*", { count: "exact", head: true }).neq("status", "completed").neq("status", "cancelled"),
     supabase.from("customers").select("*", { count: "exact", head: true }),
     supabase.from("factories").select("*", { count: "exact", head: true }).eq("is_active", true),
@@ -82,6 +85,14 @@ export default async function DashboardPage() {
         <StatCard label="โรงงานใช้งาน" value={factoryCount ?? 0} icon={Factory} accent="purple" href="/factories" />
         <StatCard label="ยอดขายรวม" value={formatBaht(monthSale)} icon={TrendingUp} accent="emerald" href="/reports" />
       </section>
+
+      <BankBalanceCard
+        savedBalance={cash.savedBalance}
+        savedBalanceAt={cash.savedBalanceAt}
+        cashOnHand={cash.cashOnHand}
+        factoryPayable={cash.factoryPayable}
+        projectedAfterCollect={cash.projectedAfterCollect}
+      />
 
       {overdueCount > 0 && (
         <Link href="/jobs?overdue=true">
