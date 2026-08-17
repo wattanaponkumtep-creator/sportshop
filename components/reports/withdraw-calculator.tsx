@@ -5,33 +5,38 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Wallet, Factory, HandCoins, ArrowDownToLine, Info, AlertTriangle, Save, Check } from "lucide-react";
+import { Wallet, Factory, HandCoins, ArrowDownToLine, Info, AlertTriangle, Save, RefreshCw } from "lucide-react";
 import { formatBaht, formatDateTH, cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { saveBankBalance, clearBankBalance } from "@/app/(admin)/reports/cash-actions";
 
 export function WithdrawCalculator({
+  effectiveCash,
   cashOnHand,
   savedBalance,
   savedBalanceAt,
+  deltaIn,
+  deltaOut,
   receivable,
   factoryPayable,
   factoryPayableCount,
 }: {
+  effectiveCash: number;
   cashOnHand: number;
   savedBalance: number | null;
   savedBalanceAt: string | null;
+  deltaIn: number;
+  deltaOut: number;
   receivable: number;
   factoryPayable: number;
   factoryPayableCount: number;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  // prefill ด้วยยอดที่บันทึกไว้ (ถ้ามี)
-  const [override, setOverride] = useState<string>(savedBalance != null ? String(savedBalance) : "");
-  const base = override.trim() === "" ? (savedBalance ?? cashOnHand) : Math.max(0, Number(override) || 0);
-  const isSaved = savedBalance != null;
-  const dirty = override.trim() !== "" && Number(override) !== savedBalance;
+  // ว่าง = ใช้ยอดสด · พิมพ์ = ตั้งยอดใหม่
+  const [override, setOverride] = useState<string>("");
+  const base = override.trim() === "" ? effectiveCash : Math.max(0, Number(override) || 0);
+  const isAnchored = savedBalance != null;
 
   const projected = base + receivable - factoryPayable; // เมื่อเก็บเงินครบ
   const cashNow = base - factoryPayable;                 // เฉพาะเงินสดตอนนี้
@@ -39,7 +44,7 @@ export function WithdrawCalculator({
   function handleSave() {
     startTransition(async () => {
       const r = await saveBankBalance({ amount: base });
-      if (r.ok) { toast({ title: "บันทึกยอดเงินในบัญชีแล้ว ✓" }); router.refresh(); }
+      if (r.ok) { toast({ title: "ตั้งยอดตั้งต้นแล้ว ✓ ระบบจะบวก-ลบตามเงินเข้า-ออกให้เอง" }); setOverride(""); router.refresh(); }
       else toast({ title: "บันทึกไม่สำเร็จ", description: r.error, variant: "destructive" });
     });
   }
@@ -53,50 +58,61 @@ export function WithdrawCalculator({
 
   return (
     <div className="space-y-3">
-      {/* ยอดเงินฐาน */}
+      {/* ยอดเงินสด (เรียลไทม์) */}
       <Card>
         <CardContent className="space-y-3 p-4 sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <div className="text-sm text-muted-foreground">💵 เงินในบัญชีตอนนี้</div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                💵 เงินในบัญชีตอนนี้
+                {isAnchored && <span className="inline-flex items-center gap-0.5 text-xs text-emerald-400"><RefreshCw className="h-3 w-3" /> อัปเดตอัตโนมัติ</span>}
+              </div>
               <div className="mt-0.5 flex flex-wrap items-baseline gap-2">
                 <span className="font-display text-2xl font-bold tabular-nums sm:text-3xl">{formatBaht(base)}</span>
-                {isSaved ? (
-                  <span className="inline-flex items-center gap-1 text-xs text-emerald-400">
-                    <Check className="h-3 w-3" /> บันทึกไว้
-                    {savedBalanceAt && <span className="text-muted-foreground">· {formatDateTH(savedBalanceAt, "d MMM yy HH:mm")}</span>}
-                  </span>
-                ) : (
-                  <span className="text-xs text-muted-foreground">(ประมาณจากระบบ)</span>
-                )}
+                {override.trim() !== "" && <span className="text-xs text-amber-400">(กำลังลองคำนวณ)</span>}
+                {override.trim() === "" && !isAnchored && <span className="text-xs text-muted-foreground">(ประมาณจากระบบ)</span>}
               </div>
-              {isSaved && (
+              {isAnchored && override.trim() === "" && (
+                <div className="mt-1 text-[11px] text-muted-foreground">
+                  ตั้งไว้ {formatBaht(savedBalance!)} {savedBalanceAt && `เมื่อ ${formatDateTH(savedBalanceAt, "d MMM yy HH:mm")}`}
+                  {deltaIn > 0 && <span className="text-emerald-400"> · + เงินเข้า {formatBaht(deltaIn)}</span>}
+                  {deltaOut > 0 && <span className="text-rose-400"> · − เงินออก {formatBaht(deltaOut)}</span>}
+                </div>
+              )}
+              {isAnchored && (
                 <button type="button" onClick={handleClear} disabled={isPending} className="mt-1 text-[11px] text-muted-foreground underline-offset-2 hover:underline">
-                  ล้างค่าที่บันทึก (กลับไปใช้ประมาณจากระบบ ฿{Math.round(cashOnHand).toLocaleString()})
+                  ล้าง (กลับไปใช้ประมาณจากระบบ ฿{Math.round(cashOnHand).toLocaleString()})
                 </button>
               )}
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">พิมพ์ยอดจริงในบัญชี แล้วบันทึกไว้</label>
+              <label className="text-xs text-muted-foreground">ตั้งยอดจริงในบัญชีตอนนี้</label>
               <div className="flex gap-2">
                 <Input
                   type="number"
                   inputMode="numeric"
                   value={override}
                   onChange={(e) => setOverride(e.target.value)}
-                  placeholder={String(Math.round(cashOnHand))}
+                  placeholder={String(Math.round(effectiveCash))}
                   className="h-9 w-full sm:w-36"
                 />
-                <Button onClick={handleSave} disabled={isPending || (isSaved && !dirty)} className="h-9 shrink-0">
-                  <Save className="h-4 w-4" /> บันทึก
+                <Button onClick={handleSave} disabled={isPending || override.trim() === ""} className="h-9 shrink-0">
+                  <Save className="h-4 w-4" /> ตั้งยอด
                 </Button>
               </div>
             </div>
           </div>
+          {isAnchored && (
+            <p className="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-2 text-[11px] text-muted-foreground">
+              <RefreshCw className="mr-1 inline h-3 w-3 text-emerald-400" />
+              ยอดนี้จะบวก/ลบให้อัตโนมัติทุกครั้งที่บันทึกเงินเข้า (รับเงินลูกค้า) หรือเงินออก (จ่ายโรงงาน/ค่าใช้จ่าย) ·
+              เมื่อเช็คยอดจริงในแอปธนาคารแล้วต่างกัน ให้ตั้งยอดใหม่อีกครั้ง
+            </p>
+          )}
         </CardContent>
       </Card>
 
-      {/* Waterfall — บวกเงินที่ลูกค้าจะจ่าย แล้วหักค่าผลิต */}
+      {/* Waterfall */}
       <Card>
         <CardContent className="space-y-2.5 p-4 sm:p-5">
           <Row icon={Wallet} label="เงินในบัญชี" value={base} tone="text-foreground" />
@@ -147,14 +163,6 @@ export function WithdrawCalculator({
                   : "เงินสดตอนนี้ยังไม่พอจ่ายค่าผลิต — ต้องเก็บเงินลูกค้าเข้ามาก่อน (ยอดค้างเก็บด้านบนจะครอบคลุมส่วนนี้)"}
               </p>
             </div>
-          </div>
-
-          <div className="flex items-start gap-2 pt-1 text-[11px] text-muted-foreground">
-            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span>
-              &quot;เอาออกได้ (เมื่อเก็บเงินครบ)&quot; = เงินในบัญชี + เงินที่ลูกค้ายังค้างจ่าย − ค่าผลิตที่ต้องจ่ายโรงงาน ·
-              ถ้าลงเงินออกในระบบไม่ครบ ให้พิมพ์ยอดจริงในบัญชีด้านบน
-            </span>
           </div>
         </CardContent>
       </Card>

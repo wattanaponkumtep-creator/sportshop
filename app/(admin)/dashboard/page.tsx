@@ -87,9 +87,12 @@ export default async function DashboardPage() {
       </section>
 
       <BankBalanceCard
+        effectiveCash={cash.effectiveCash}
+        cashOnHand={cash.cashOnHand}
         savedBalance={cash.savedBalance}
         savedBalanceAt={cash.savedBalanceAt}
-        cashOnHand={cash.cashOnHand}
+        deltaIn={cash.deltaIn}
+        deltaOut={cash.deltaOut}
         factoryPayable={cash.factoryPayable}
         projectedAfterCollect={cash.projectedAfterCollect}
       />

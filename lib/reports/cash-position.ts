@@ -8,14 +8,14 @@ export async function getCashPosition() {
   const supabase = await createClient();
 
   const [{ data: payments }, { data: expenses }, { data: jobs }, { data: shop }] = await Promise.all([
-    supabase.from("payments").select("job_id, type, amount"),
-    supabase.from("expenses").select("amount"),
+    supabase.from("payments").select("job_id, type, amount, created_at"),
+    supabase.from("expenses").select("amount, created_at"),
     supabase.from("jobs").select("id, status, sale_price, discount, cost, factory_cost_paid_at, factory_id"),
     supabase.from("shop_info").select("bank_balance, bank_balance_updated_at").eq("id", 1).maybeSingle(),
   ]);
 
-  const pays = (payments ?? []) as { job_id: string; type: string; amount: number }[];
-  const exps = (expenses ?? []) as { amount: number }[];
+  const pays = (payments ?? []) as { job_id: string; type: string; amount: number; created_at: string }[];
+  const exps = (expenses ?? []) as { amount: number; created_at: string }[];
   const js = (jobs ?? []) as {
     id: string;
     status: JobStatus;
@@ -60,21 +60,39 @@ export async function getCashPosition() {
   const factoryPayableCount = payableJobs.length;
   const factoryCount = new Set(payableJobs.map((j) => j.factory_id ?? "_none")).size;
 
-  // ยอดเงินจริงที่ผู้ใช้บันทึกไว้ (ถ้ามี ใช้แทนค่าประมาณ)
+  // ยอดเงินจริงที่ผู้ใช้บันทึกไว้ (anchor) — ถ้ามี ใช้เป็นจุดตั้งต้น
   const shopRow = (shop ?? null) as { bank_balance: number | null; bank_balance_updated_at: string | null } | null;
   const savedBalance = shopRow?.bank_balance != null ? Number(shopRow.bank_balance) : null;
   const savedBalanceAt = shopRow?.bank_balance_updated_at ?? null;
 
-  // เงินสดที่ใช้คำนวณจริง = ยอดที่บันทึกไว้ (ถ้ามี) ไม่งั้นใช้ค่าประมาณจากระบบ
-  const effectiveCash = savedBalance != null ? savedBalance : cashOnHand;
+  // เรียลไทม์: บวก/ลบรายการที่บันทึก "หลัง" ตั้งยอดตั้งต้น
+  let deltaIn = 0;
+  let deltaOut = 0;
+  if (savedBalance != null && savedBalanceAt) {
+    for (const p of pays) {
+      if (p.created_at > savedBalanceAt) deltaIn += p.type === "refund" ? -Number(p.amount) : Number(p.amount);
+    }
+    for (const e of exps) {
+      if (e.created_at > savedBalanceAt) deltaOut += Number(e.amount);
+    }
+  }
+
+  // ยอดสดตอนนี้ = ยอดตั้งต้น + เงินเข้าหลังตั้ง − เงินออกหลังตั้ง
+  const liveBalance = savedBalance != null ? savedBalance + deltaIn - deltaOut : null;
+
+  // เงินสดที่ใช้คำนวณจริง = ยอดสด (ถ้าตั้งไว้) ไม่งั้นใช้ค่าประมาณจากระบบทั้งหมด
+  const effectiveCash = liveBalance != null ? liveBalance : cashOnHand;
 
   return {
     totalReceived,
     totalPaidOut,
     cashOnHand,            // ค่าประมาณจากระบบ (รับ − จ่าย)
-    savedBalance,          // ยอดจริงที่บันทึกไว้ (null ถ้าไม่ได้บันทึก)
+    savedBalance,          // ยอดตั้งต้นที่บันทึกไว้ (null ถ้าไม่ได้บันทึก)
     savedBalanceAt,
-    effectiveCash,         // ยอดที่ใช้คำนวณจริง
+    deltaIn,               // เงินเข้าหลังตั้งยอด
+    deltaOut,              // เงินออกหลังตั้งยอด
+    liveBalance,           // ยอดสด = ตั้งต้น + เข้า − ออก
+    effectiveCash,         // ยอดที่ใช้คำนวณจริง (= liveBalance ถ้าตั้งไว้)
     heldForOpen: Math.max(0, heldForOpen),
     outstandingReceivable,
     factoryPayable,

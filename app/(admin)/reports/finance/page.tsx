@@ -93,9 +93,12 @@ export default async function FinanceReportPage({
           <p className="text-xs text-muted-foreground">หลังกันเงินค่าผลิตที่ต้องจ่ายโรงงานไว้แล้ว</p>
         </div>
         <WithdrawCalculator
+          effectiveCash={cash.effectiveCash}
           cashOnHand={cash.cashOnHand}
           savedBalance={cash.savedBalance}
           savedBalanceAt={cash.savedBalanceAt}
+          deltaIn={cash.deltaIn}
+          deltaOut={cash.deltaOut}
           receivable={cash.outstandingReceivable}
           factoryPayable={cash.factoryPayable}
           factoryPayableCount={cash.factoryPayableCount}
