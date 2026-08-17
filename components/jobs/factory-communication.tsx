@@ -23,6 +23,7 @@ type Props = {
   customerName?: string | null;
   customerPhone?: string | null;
   deliveryAddress?: string | null;
+  deliveryMethod?: string | null;
   shopName?: string | null;
   factoryJobId: string;
   factoryName: string;
@@ -42,6 +43,7 @@ export function FactoryCommunication({
   customerName,
   customerPhone,
   deliveryAddress,
+  deliveryMethod,
   shopName,
   factoryJobId,
   factoryName,
@@ -115,6 +117,9 @@ export function FactoryCommunication({
       lines.push("");
     }
 
+    if (deliveryMethod?.trim()) {
+      lines.push(`🚚 จัดส่งโดย: ${deliveryMethod.trim()}`);
+    }
     if (customerName) {
       lines.push(`👤 ลูกค้า: ${customerName}${customerPhone ? ` (${customerPhone})` : ""}`);
     }

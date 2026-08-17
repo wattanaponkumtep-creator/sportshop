@@ -2574,3 +2574,10 @@ create index if not exists jobs_factory_cost_paid_idx
 alter table public.shop_info
   add column if not exists bank_balance numeric(12,2),
   add column if not exists bank_balance_updated_at timestamptz;
+
+
+-- =========================================================================
+-- ==================== 0031_delivery_method.sql ====================
+-- =========================================================================
+alter table public.jobs
+  add column if not exists delivery_method text;

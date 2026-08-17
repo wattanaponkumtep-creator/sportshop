@@ -268,6 +268,21 @@ export const PRODUCTION_OPTION_GROUPS = [
 // แบนรวมทุก option (ใช้ใน datalist autocomplete)
 export const PRODUCTION_OPTION_PRESETS = PRODUCTION_OPTION_GROUPS.flatMap((g) => g.options);
 
+// ---------- วิธีจัดส่ง (ขนส่ง) — บอกโรงงานว่าส่งด้วยอะไร ----------
+export const DELIVERY_METHOD_PRESETS = [
+  "รถทัวร์ (บขส.)",
+  "รถตู้",
+  "Kerry Express",
+  "Flash Express",
+  "J&T Express",
+  "ไปรษณีย์ไทย / EMS",
+  "นิ่มเอ็กซ์เพรส",
+  "SCG Express",
+  "ขนส่งเอกชน (รถบรรทุก)",
+  "ลูกค้ามารับเอง",
+  "ร้านไปส่งเอง",
+];
+
 // ---------- Factory Portal ----------
 export const PRODUCTION_STAGE_LABEL: Record<string, string> = {
   layout: "เลย์เอ้าท์/ดีไซน์",

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { X, Plus } from "lucide-react";
-import { PRIORITY_LABEL, PRODUCTION_OPTION_GROUPS } from "@/lib/constants";
+import { PRIORITY_LABEL, PRODUCTION_OPTION_GROUPS, DELIVERY_METHOD_PRESETS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { updateJob } from "@/app/(admin)/jobs/actions";
@@ -28,6 +28,7 @@ type EditInput = {
   note: string;
   job_label: string;
   delivery_address: string;
+  delivery_method: string;
 };
 
 const PRIORITIES: PriorityLevel[] = ["normal", "urgent", "rush"];
@@ -68,6 +69,7 @@ export function JobDetailsPanel({ job, factories }: { job: Job; factories: { id:
       note: job.note ?? "",
       job_label: job.job_label ?? "",
       delivery_address: job.delivery_address ?? "",
+      delivery_method: job.delivery_method ?? "",
     },
   });
   const factoryId = watch("factory_id");
@@ -215,16 +217,36 @@ export function JobDetailsPanel({ job, factories }: { job: Job; factories: { id:
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>ที่อยู่จัดส่ง</CardTitle></CardHeader>
-        <CardContent className="space-y-1.5">
-          <Textarea
-            {...register("delivery_address")}
-            rows={3}
-            placeholder="เช่น โรงเรียน... บ้านเลขที่ 57 หมู่ 1 ต.นับทึบ อ.วังน้อย จ.พระนครศรีอยุธยา 13170"
-          />
-          <p className="text-xs text-muted-foreground">
-            💡 ที่อยู่นี้จะแสดงในข้อความแจ้งโรงงาน (ปุ่ม &quot;ส่งใบสั่งงาน&quot; ใน tab โรงงาน)
-          </p>
+        <CardHeader><CardTitle>การจัดส่ง</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>วิธีจัดส่ง / ขนส่ง</Label>
+            <datalist id="delivery-methods">
+              {DELIVERY_METHOD_PRESETS.map((m) => (
+                <option key={m} value={m} />
+              ))}
+            </datalist>
+            <Input
+              list="delivery-methods"
+              {...register("delivery_method")}
+              placeholder="เช่น รถทัวร์ (บขส.), Kerry, Flash, ไปรษณีย์..."
+              autoComplete="off"
+            />
+            <p className="text-xs text-muted-foreground">
+              💡 บอกโรงงานว่างานนี้ส่งด้วยขนส่งอะไร — จะแสดงในใบสั่งงาน
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label>ที่อยู่จัดส่ง</Label>
+            <Textarea
+              {...register("delivery_address")}
+              rows={3}
+              placeholder="เช่น โรงเรียน... บ้านเลขที่ 57 หมู่ 1 ต.นับทึบ อ.วังน้อย จ.พระนครศรีอยุธยา 13170"
+            />
+            <p className="text-xs text-muted-foreground">
+              💡 ที่อยู่นี้จะแสดงในข้อความแจ้งโรงงาน (ปุ่ม &quot;ส่งใบสั่งงาน&quot; ใน tab โรงงาน)
+            </p>
+          </div>
         </CardContent>
       </Card>
 

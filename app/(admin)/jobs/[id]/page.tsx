@@ -243,6 +243,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                   customerName={customer?.name ?? null}
                   customerPhone={customer?.phone ?? null}
                   deliveryAddress={job.delivery_address}
+                  deliveryMethod={job.delivery_method}
                   shopName={shopInfo?.shop_name ?? null}
                   factoryJobId={fj.id}
                   factoryName={factoriesById.get(fj.factory_id) ?? "โรงงาน"}

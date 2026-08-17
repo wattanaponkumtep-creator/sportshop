@@ -224,6 +224,7 @@ export interface Job {
   ship_progress: number;
   job_label: string | null;
   delivery_address: string | null;
+  delivery_method: string | null;
   production_options: string[];
   factory_cost_paid_at: string | null;
 }
