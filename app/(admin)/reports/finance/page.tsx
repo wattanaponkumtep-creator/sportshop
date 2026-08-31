@@ -252,7 +252,7 @@ export default async function FinanceReportPage({
           <h2 className="font-display text-lg font-bold sm:text-xl">📒 สรุปบัญชีสิ้นเดือน</h2>
           <p className="text-xs text-muted-foreground">กำไรขาดทุนแยกรายเดือน (6 เดือนล่าสุด) — แตะเดือนเพื่อดูรายละเอียด</p>
         </div>
-        <MonthlyClosingTable monthly={data.monthly} />
+        <MonthlyClosingTable monthly={data.monthly} shopName={data.shopName} />
       </section>
 
       {/* ============ 3.5 กำไรรายงาน แยกตามงาน ============ */}

@@ -82,6 +82,7 @@ export async function getFinanceData(range: FinanceRange = "this_month") {
     { data: openJobs },
     { data: allPaymentsForOutstanding },
     { count: pendingInquiries },
+    { data: shopRow },
   ] = await Promise.all([
     supabase.from("payments").select("type, amount, paid_at").gte("paid_at", dataStart),
     supabase.from("expenses").select("category, amount, paid_at").gte("paid_at", dataStart),
@@ -101,7 +102,10 @@ export async function getFinanceData(range: FinanceRange = "this_month") {
     supabase.from("payments").select("job_id, type, amount"),
     supabase.from("inquiries").select("id", { count: "exact", head: true }).eq("status", "new")
       .then((res) => res, () => ({ count: 0 })),
+    supabase.from("shop_info").select("shop_name").eq("id", 1).maybeSingle(),
   ]);
+
+  const shopName = ((shopRow as { shop_name: string | null } | null)?.shop_name) || "SportShop";
 
   const allPayments = (payments ?? []) as PaymentRow[];
   const allExpenses = (expenses ?? []) as ExpenseRow[];
@@ -267,6 +271,7 @@ export async function getFinanceData(range: FinanceRange = "this_month") {
   return {
     range,
     rangeLabel: r.label,
+    shopName,
     summary: {
       cashIn,
       cashOut,
