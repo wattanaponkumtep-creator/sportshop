@@ -23,7 +23,8 @@
       "Bash(rm -rf .next)",
       "Bash(git rev-list *)",
       "mcp__visualize__read_me",
-      "mcp__visualize__show_widget"
+      "mcp__visualize__show_widget",
+      "mcp__4c7643e8-93e4-4af6-a926-25e414fc01dd__list_projects"
     ]
   }
 }

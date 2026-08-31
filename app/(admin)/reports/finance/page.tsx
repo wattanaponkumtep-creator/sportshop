@@ -27,6 +27,7 @@ import { DonutChart } from "@/components/reports/donut-chart";
 import { FinanceRangeTabs } from "@/components/reports/finance-range-tabs";
 import { ExpenseManager } from "@/components/reports/expense-manager";
 import { JobProfitTable } from "@/components/reports/job-profit-table";
+import { MonthlyClosingTable } from "@/components/reports/monthly-closing-table";
 import { EXPENSE_CATEGORY_LABEL, EXPENSE_CATEGORY_EMOJI } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -243,6 +244,15 @@ export default async function FinanceReportPage({
             </div>
           </CardContent>
         </Card>
+      </section>
+
+      {/* ============ 3.2 สรุปบัญชีสิ้นเดือน ============ */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="font-display text-lg font-bold sm:text-xl">📒 สรุปบัญชีสิ้นเดือน</h2>
+          <p className="text-xs text-muted-foreground">กำไรขาดทุนแยกรายเดือน (6 เดือนล่าสุด) — แตะเดือนเพื่อดูรายละเอียด</p>
+        </div>
+        <MonthlyClosingTable monthly={data.monthly} />
       </section>
 
       {/* ============ 3.5 กำไรรายงาน แยกตามงาน ============ */}

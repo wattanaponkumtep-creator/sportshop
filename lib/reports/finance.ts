@@ -17,6 +17,7 @@ type ClosedJobRow = {
   other_cost: number;
   product_type: string | null;
   updated_at: string;
+  received_at: string;
   customers: { name: string } | { name: string }[] | null;
 };
 
@@ -61,6 +62,9 @@ export type FinanceMonth = {
   revenue: number;
   cogs: number;
   grossProfit: number;
+  operatingExpenses: number;
+  netProfit: number;
+  jobCount: number;
 };
 
 export async function getFinanceData(range: FinanceRange = "this_month") {
@@ -83,8 +87,9 @@ export async function getFinanceData(range: FinanceRange = "this_month") {
     supabase.from("expenses").select("category, amount, paid_at").gte("paid_at", dataStart),
     supabase
       .from("jobs")
-      .select("id, job_code, job_label, status, sale_price, discount, cost, shipping_cost, other_cost, product_type, updated_at, customers(name)")
-      .gte("updated_at", dataStart)
+      .select("id, job_code, job_label, status, sale_price, discount, cost, shipping_cost, other_cost, product_type, updated_at, received_at, customers(name)")
+      // คิดกำไร/ต้นทุนงานตาม "เดือนที่เริ่มงาน" (received_at) — นับเฉพาะงานที่ปิดแล้ว
+      .gte("received_at", dataStart)
       .in("status", ["shipped", "completed"]),
     supabase.from("expenses").select("*").order("paid_at", { ascending: false }).limit(20),
     // เอกสารรอ: งานที่ยังไม่ปิด
@@ -107,7 +112,8 @@ export async function getFinanceData(range: FinanceRange = "this_month") {
   // ---------- Ranged totals ----------
   const rangedPayments = allPayments.filter((p) => inRange(p.paid_at));
   const rangedExpenses = allExpenses.filter((e) => inRange(e.paid_at));
-  const rangedClosed = closedJobs.filter((j) => inRange(j.updated_at));
+  // งานถูกจัดเข้าเดือนที่ "เริ่มงาน" (received_at) ไม่ใช่เดือนที่ปิด
+  const rangedClosed = closedJobs.filter((j) => inRange(j.received_at));
 
   const cashIn = rangedPayments.reduce(
     (s, p) => s + (p.type === "refund" ? -Number(p.amount) : Number(p.amount)),
@@ -180,12 +186,17 @@ export async function getFinanceData(range: FinanceRange = "this_month") {
       .filter((p) => inMonth(p.paid_at))
       .reduce((s, p) => s + (p.type === "refund" ? -Number(p.amount) : Number(p.amount)), 0);
     const mCashOut = allExpenses.filter((e) => inMonth(e.paid_at)).reduce((s, e) => s + Number(e.amount), 0);
-    const mClosed = closedJobs.filter((j) => inMonth(j.updated_at));
+    const mClosed = closedJobs.filter((j) => inMonth(j.received_at));
     const mRevenue = mClosed.reduce((s, j) => s + net(j.sale_price, j.discount), 0);
     const mCogs = mClosed.reduce(
       (s, j) => s + Number(j.cost ?? 0) + Number(j.shipping_cost ?? 0) + Number(j.other_cost ?? 0),
       0,
     );
+    // ค่าใช้จ่ายร้าน (ไม่ใช่ต้นทุนงาน) ตามเดือนที่จ่ายจริง
+    const mOperatingExpenses = allExpenses
+      .filter((e) => inMonth(e.paid_at) && isOperatingExpense(e.category))
+      .reduce((s, e) => s + Number(e.amount), 0);
+    const mGrossProfit = mRevenue - mCogs;
     monthly.push({
       label: m.label,
       cashIn: mCashIn,
@@ -193,7 +204,10 @@ export async function getFinanceData(range: FinanceRange = "this_month") {
       netCash: mCashIn - mCashOut,
       revenue: mRevenue,
       cogs: mCogs,
-      grossProfit: mRevenue - mCogs,
+      grossProfit: mGrossProfit,
+      operatingExpenses: mOperatingExpenses,
+      netProfit: mGrossProfit - mOperatingExpenses,
+      jobCount: mClosed.length,
     });
   }
 

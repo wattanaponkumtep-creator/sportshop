@@ -201,8 +201,9 @@ export async function getReportData() {
   const monthly: MonthlyStat[] = [];
   for (let i = 5; i >= 0; i--) {
     const m = getMonthBoundsBangkok(i);
+    // งานถูกจัดเข้าเดือนที่ "เริ่มงาน" (received_at) ไม่ใช่เดือนที่ปิด
     const closed = allJobs.filter(
-      (j) => isClosed(j) && j.updated_at >= m.start && j.updated_at < m.end,
+      (j) => isClosed(j) && j.received_at >= m.start && j.received_at < m.end,
     );
     const newOnes = allJobs.filter(
       (j) => j.received_at >= m.start && j.received_at < m.end,
@@ -216,12 +217,12 @@ export async function getReportData() {
   // ---------- Per-job profit breakdown (this month + YTD) ----------
   const thisMonthBounds = getMonthBoundsBangkok(0);
   const jobBreakdownThisMonth = allJobs
-    .filter((j) => isClosed(j) && j.updated_at >= thisMonthBounds.start && j.updated_at < thisMonthBounds.end)
+    .filter((j) => isClosed(j) && j.received_at >= thisMonthBounds.start && j.received_at < thisMonthBounds.end)
     .map(toJobProfitRow)
     .sort((a, b) => b.profit - a.profit);
 
-  // ---------- Year-to-date totals ----------
-  const ytdJobsClosed = allJobs.filter((j) => isClosed(j) && j.updated_at >= yearStart);
+  // ---------- Year-to-date totals (จัดเข้าเดือนที่เริ่มงาน) ----------
+  const ytdJobsClosed = allJobs.filter((j) => isClosed(j) && j.received_at >= yearStart);
   const jobBreakdownYtd = ytdJobsClosed.map(toJobProfitRow).sort((a, b) => b.profit - a.profit);
   const ytdPayments = allPayments.filter((p) => p.paid_at >= yearStart);
   const ytd = {
@@ -378,7 +379,7 @@ export async function getReportData() {
   // Completion rate (over last 6 months): closed / (closed + cancelled)
   const ytdClosed = ytdJobsClosed.length;
   const ytdCancelled = allJobs.filter(
-    (j) => isCancelled(j) && j.updated_at >= yearStart,
+    (j) => isCancelled(j) && j.received_at >= yearStart,
   ).length;
   const completionRate =
     ytdClosed + ytdCancelled > 0 ? (ytdClosed / (ytdClosed + ytdCancelled)) * 100 : 0;
