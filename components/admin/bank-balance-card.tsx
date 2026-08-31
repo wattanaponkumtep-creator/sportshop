@@ -18,7 +18,7 @@ export function BankBalanceCard({
   deltaIn,
   deltaOut,
   factoryPayable,
-  projectedAfterCollect,
+  withdrawableNow,
 }: {
   effectiveCash: number;
   cashOnHand: number;
@@ -27,7 +27,7 @@ export function BankBalanceCard({
   deltaIn: number;
   deltaOut: number;
   factoryPayable: number;
-  projectedAfterCollect: number;
+  withdrawableNow: number;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -118,10 +118,10 @@ export function BankBalanceCard({
             <div className="h-8 w-px bg-border" />
             <div className="text-right">
               <div className="flex items-center justify-end gap-1 text-[11px] text-muted-foreground">
-                <ArrowDownToLine className="h-3 w-3 text-emerald-400" /> เอาออกได้
+                <ArrowDownToLine className="h-3 w-3 text-emerald-400" /> ถอนได้จริง
               </div>
-              <div className={cn("font-mono text-sm font-bold tabular-nums", projectedAfterCollect >= 0 ? "text-emerald-400" : "text-rose-400")}>
-                {projectedAfterCollect < 0 ? "-" : ""}{formatBaht(Math.abs(projectedAfterCollect))}
+              <div className={cn("font-mono text-sm font-bold tabular-nums", withdrawableNow > 0 ? "text-emerald-400" : "text-amber-400")}>
+                {formatBaht(withdrawableNow)}
               </div>
             </div>
             <ArrowRight className="h-4 w-4 text-muted-foreground" />

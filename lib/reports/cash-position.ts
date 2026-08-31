@@ -10,7 +10,7 @@ export async function getCashPosition() {
   const [{ data: payments }, { data: expenses }, { data: jobs }, { data: shop }] = await Promise.all([
     supabase.from("payments").select("job_id, type, amount, created_at"),
     supabase.from("expenses").select("amount, created_at"),
-    supabase.from("jobs").select("id, status, sale_price, discount, cost, factory_cost_paid_at, factory_id"),
+    supabase.from("jobs").select("id, status, sale_price, discount, cost, shipping_cost, other_cost, factory_cost_paid_at, factory_id"),
     supabase.from("shop_info").select("bank_balance, bank_balance_updated_at").eq("id", 1).maybeSingle(),
   ]);
 
@@ -22,6 +22,8 @@ export async function getCashPosition() {
     sale_price: number;
     discount: number;
     cost: number;
+    shipping_cost: number;
+    other_cost: number;
     factory_cost_paid_at: string | null;
     factory_id: string | null;
   }[];
@@ -83,6 +85,27 @@ export async function getCashPosition() {
   // เงินสดที่ใช้คำนวณจริง = ยอดสด (ถ้าตั้งไว้) ไม่งั้นใช้ค่าประมาณจากระบบทั้งหมด
   const effectiveCash = liveBalance != null ? liveBalance : cashOnHand;
 
+  // ---------- กำไรจากงานที่ "จบครบวงจร" (ส่งของ + ลูกค้าจ่ายครบ + จ่ายโรงงานแล้ว) ----------
+  // งานส่ง/ปิดแล้ว = ถือว่าจ่ายโรงงานแล้ว (ตามตรรกะ factory payables)
+  let realizedProfit = 0;
+  let realizedCount = 0;
+  for (const j of js) {
+    const delivered = j.status === "shipped" || j.status === "completed";
+    if (!delivered) continue;
+    const net = Math.max(0, Number(j.sale_price ?? 0) - Number(j.discount ?? 0));
+    if (net <= 0) continue;
+    if ((paidByJob.get(j.id) ?? 0) < net) continue; // ลูกค้ายังจ่ายไม่ครบ = ยังไม่จบวงจร
+    const totalCost = Number(j.cost ?? 0) + Number(j.shipping_cost ?? 0) + Number(j.other_cost ?? 0);
+    realizedProfit += net - totalCost;
+    realizedCount++;
+  }
+
+  // ถอนได้จริงตอนนี้ = กำไรที่จบวงจร แต่ไม่เกินเงินสดที่เหลือหลังกันค่าผลิตที่ยังต้องสำรองจ่าย
+  const freeCashAfterFactory = effectiveCash - factoryPayable;
+  const withdrawableNow = Math.max(0, Math.min(realizedProfit, freeCashAfterFactory));
+  // ส่วนที่เหลือของกำไร = ยังหมุนเป็นทุน (สำรองจ่ายโรงงานงานอื่น / รอลูกค้าจ่าย)
+  const tiedUpAsCapital = Math.max(0, realizedProfit - withdrawableNow);
+
   return {
     totalReceived,
     totalPaidOut,
@@ -98,6 +121,11 @@ export async function getCashPosition() {
     factoryPayable,
     factoryPayableCount,
     factoryCount,
+    // โมเดล "สำรองจ่ายโรงงานก่อน แล้วเก็บเงินลูกค้าตอนส่งของ"
+    realizedProfit,      // กำไรจากงานที่จบครบวงจร (ส่ง+เก็บครบ)
+    realizedCount,       // จำนวนงานที่จบครบวงจร
+    withdrawableNow,     // ถอนได้จริงตอนนี้ (กำไรที่จบวงจร แต่ไม่เกินเงินสดหลังกันค่าผลิต)
+    tiedUpAsCapital,     // กำไรที่ยังหมุนเป็นทุน (ยังถอนไม่ได้)
     // เอาออกได้ทันทีจากเงินสดตอนนี้ (หักค่าผลิต) — อาจติดลบถ้ายังไม่เก็บเงินลูกค้า
     safeAfterFactory: effectiveCash - factoryPayable,
     // เมื่อเก็บเงินลูกค้าครบแล้ว: บวกยอดค้างเก็บเข้าไปด้วย

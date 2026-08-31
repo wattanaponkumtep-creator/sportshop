@@ -94,7 +94,7 @@ export default async function DashboardPage() {
         deltaIn={cash.deltaIn}
         deltaOut={cash.deltaOut}
         factoryPayable={cash.factoryPayable}
-        projectedAfterCollect={cash.projectedAfterCollect}
+        withdrawableNow={cash.withdrawableNow}
       />
 
       {overdueCount > 0 && (

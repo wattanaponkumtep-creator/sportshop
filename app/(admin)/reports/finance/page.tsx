@@ -20,6 +20,7 @@ import {
 import { getFinanceData } from "@/lib/reports/finance";
 import { getCashPosition } from "@/lib/reports/cash-position";
 import { WithdrawCalculator } from "@/components/reports/withdraw-calculator";
+import { WithdrawableProfitCard } from "@/components/reports/withdrawable-profit-card";
 import { pctChange, formatPct, type FinanceRange } from "@/lib/reports/queries";
 import { formatBaht, cn } from "@/lib/utils";
 import { TrendChart } from "@/components/reports/trend-chart";
@@ -93,6 +94,19 @@ export default async function FinanceReportPage({
           <h2 className="font-display text-lg font-bold sm:text-xl">💸 เงินที่เอาออกมาใช้ได้</h2>
           <p className="text-xs text-muted-foreground">หลังกันเงินค่าผลิตที่ต้องจ่ายโรงงานไว้แล้ว</p>
         </div>
+        <WithdrawableProfitCard
+          withdrawableNow={cash.withdrawableNow}
+          realizedProfit={cash.realizedProfit}
+          realizedCount={cash.realizedCount}
+          tiedUpAsCapital={cash.tiedUpAsCapital}
+          effectiveCash={cash.effectiveCash}
+          factoryPayable={cash.factoryPayable}
+        />
+        <details className="rounded-lg border border-border bg-card/40">
+          <summary className="cursor-pointer px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground">
+            🧮 เครื่องคำนวณละเอียด (รวมเงินที่ลูกค้ายังค้างจ่าย + ตั้งยอดเงินจริง)
+          </summary>
+          <div className="border-t border-border p-3">
         <WithdrawCalculator
           effectiveCash={cash.effectiveCash}
           cashOnHand={cash.cashOnHand}
@@ -104,6 +118,8 @@ export default async function FinanceReportPage({
           factoryPayable={cash.factoryPayable}
           factoryPayableCount={cash.factoryPayableCount}
         />
+          </div>
+        </details>
       </section>
 
       {/* ============ 1. เอกสารรอดำเนินการ ============ */}
