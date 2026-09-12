@@ -2,13 +2,16 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { JobStatus } from "@/lib/types/database";
 
-// สถานะ "กำลังผลิต" — ส่งโรงงานแล้วแต่ยังไม่จัดส่ง = ต้องเตรียมเงินจ่ายค่าผลิต
-// เมื่อขึ้น "จัดส่งแล้ว (shipped) / ปิดงาน (completed)" = จ่ายค่าผลิตแล้ว → ออกจากลิสต์
+// สถานะที่ส่งโรงงานแล้ว = มีภาระค่าผลิต (รวมส่งของ/ปิดงานแล้วด้วย)
+// จ่ายโรงงานหรือยัง ดูจาก factory_cost_paid_at เท่านั้น — ไม่เดาจากสถานะส่งของ
+// (บางงานส่งให้ลูกค้าแล้วแต่ยังไม่ได้จ่ายโรงงาน — โรงงานให้เครดิต)
 export const FACTORY_TO_PAY_STATUSES: JobStatus[] = [
   "sent_to_factory",
   "producing",
   "qc",
   "ready_to_ship",
+  "shipped",
+  "completed",
 ];
 
 type PayableJobRow = {

@@ -224,9 +224,9 @@ export function FactoryPayablesView({
       <div className="flex items-start gap-2 rounded-lg border border-border bg-card/40 p-3 text-xs text-muted-foreground">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
         <span>
-          แสดงงานที่กำลังผลิต (ส่งโรงงาน → กำลังผลิต → QC → รอจัดส่ง) ที่มีต้นทุน &gt; 0 และยังไม่จ่าย ·
-          เมื่องานขึ้นสถานะ &quot;จัดส่งแล้ว/ปิดงาน&quot; ระบบถือว่าจ่ายค่าผลิตแล้ว จะออกจากลิสต์อัตโนมัติ +
-          บันทึกเป็นเงินออก (หมวดโรงงาน) ให้เอง → กระแสเงินสดในรายงานการเงินอัปเดตตาม
+          แสดงทุกงานที่ส่งโรงงานแล้ว (มีต้นทุน &gt; 0) และ<span className="font-medium">ยังไม่ได้กด &quot;จ่ายแล้ว&quot;</span> —
+          รวมงานที่ส่งของให้ลูกค้าไปแล้วแต่ยังค้างจ่ายโรงงานด้วย · กด &quot;จ่ายแล้ว&quot; เมื่อจ่ายโรงงานจริง
+          ระบบจะบันทึกเป็นเงินออก (หมวดโรงงาน) ให้เอง → กระแสเงินสดอัปเดตตาม
         </span>
       </div>
     </div>

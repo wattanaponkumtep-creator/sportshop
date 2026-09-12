@@ -92,6 +92,7 @@ export async function getCashPosition() {
   for (const j of js) {
     const delivered = j.status === "shipped" || j.status === "completed";
     if (!delivered) continue;
+    if (!j.factory_cost_paid_at) continue; // ยังไม่ได้จ่ายโรงงาน = ยังไม่จบวงจร
     const net = Math.max(0, Number(j.sale_price ?? 0) - Number(j.discount ?? 0));
     if (net <= 0) continue;
     if ((paidByJob.get(j.id) ?? 0) < net) continue; // ลูกค้ายังจ่ายไม่ครบ = ยังไม่จบวงจร

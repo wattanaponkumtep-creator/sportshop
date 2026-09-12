@@ -5,7 +5,6 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import type { FactoryJobStatus, JobStatus } from "@/lib/types/database";
 import { sendStatusNotificationToCustomer } from "@/lib/jobs/notifications";
-import { markFactoryCostPaid } from "@/app/(admin)/reports/factory-cost-actions";
 
 const JOB_STATUS_VALUES = [
   "received", "designing", "awaiting_approval", "sent_to_factory",
@@ -109,14 +108,9 @@ export async function updateJobStatus(jobId: string, status: JobStatus) {
   const { error } = await supabase.from("jobs").update({ status }).eq("id", jobId);
   if (error) return { ok: false as const, error: error.message };
 
-  // งานขึ้น "จัดส่งแล้ว/ปิดงาน" = จ่ายค่าผลิตให้โรงงานแล้ว → บันทึกอัตโนมัติ (+ ลงเงินออก)
-  if (status === "shipped" || status === "completed") {
-    try {
-      await markFactoryCostPaid(jobId);
-    } catch {
-      // อย่าบล็อกการเปลี่ยนสถานะถ้าบันทึกค่าผลิตพลาด
-    }
-  }
+  // หมายเหตุ: ไม่ auto-mark จ่ายโรงงานตอนส่งของแล้ว
+  // เพราะบางงานส่งให้ลูกค้าแล้วแต่ยังไม่ได้จ่ายโรงงาน (โรงงานให้เครดิต)
+  // → ให้กด "จ่ายแล้ว" เองในหน้าค่าผลิตเมื่อจ่ายโรงงานจริง
 
   // Auto-send LINE notification on meaningful status changes (best-effort, ignore failures)
   const notifyStatuses: JobStatus[] = ["sent_to_factory", "ready_to_ship", "shipped", "completed"];

@@ -80,10 +80,10 @@ export async function getReceivables() {
     else if (paid < net) collect = "partial";
     else collect = "paid";
 
-    // จ่ายโรงงานแล้ว = ติ๊กจ่ายไว้ หรือ งานส่ง/ปิดแล้ว (ตามตรรกะ factory payables)
+    // จ่ายโรงงานแล้ว = ติ๊กจ่ายไว้เท่านั้น (ส่งของแล้วไม่ได้แปลว่าจ่ายโรงงานแล้ว)
     const factoryCost = Number(j.cost ?? 0);
     const factoryHasCost = factoryCost > 0;
-    const factoryPaid = !!j.factory_cost_paid_at || j.status === "shipped" || j.status === "completed";
+    const factoryPaid = !!j.factory_cost_paid_at;
 
     const row: ReceivableJob = {
       id: j.id,
