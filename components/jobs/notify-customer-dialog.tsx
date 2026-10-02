@@ -75,6 +75,7 @@ export function NotifyCustomerDialog({
   channels,
   salePrice,
   totalPaid,
+  customerShippingFee = 0,
   shopInfo,
 }: {
   jobCode: string;
@@ -87,6 +88,7 @@ export function NotifyCustomerDialog({
   channels: Channel[];
   salePrice?: number;
   totalPaid?: number;
+  customerShippingFee?: number;
   shopInfo?: ShopInfo | null;
 }) {
   const [open, setOpen] = useState(false);
@@ -128,6 +130,7 @@ export function NotifyCustomerDialog({
         "",
         jobLabel ? `📌 ${jobLabel}` : null,
         productType ? `📋 ${productType}` : null,
+        customerShippingFee > 0 ? `🚚 มีค่าจัดส่ง ${formatBaht(customerShippingFee)} (ออเดอร์ขนาดเล็ก) — รวมในยอดแล้ว` : null,
         `🔔 สถานะ: ${JOB_STATUS_LABEL[status]}`,
         "",
         STATUS_MESSAGES[status] ?? "อัปเดตสถานะงานของคุณครับ",
@@ -136,7 +139,7 @@ export function NotifyCustomerDialog({
       ]
         .filter((l) => l !== null)
         .join("\n"),
-    [jobCode, jobLabel, productType, status, trackUrl],
+    [jobCode, jobLabel, productType, status, trackUrl, customerShippingFee],
   );
 
   // Payment block — only built if includePayment + hasOutstanding

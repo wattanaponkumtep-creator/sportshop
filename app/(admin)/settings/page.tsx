@@ -33,7 +33,7 @@ export default async function SettingsPage() {
       .select("calendar_token, line_user_id_personal")
       .eq("id", user?.id ?? "")
       .maybeSingle(),
-    supabase.from("shop_info").select("shop_name, address, phone, email, tax_id, bank_info").eq("id", 1).limit(1),
+    supabase.from("shop_info").select("shop_name, address, phone, email, tax_id, bank_info, charge_customer_shipping, free_ship_min_qty, customer_ship_fee").eq("id", 1).limit(1),
     supabase.from("digest_recipients").select("*").order("created_at", { ascending: false }),
   ]);
 
@@ -46,6 +46,9 @@ export default async function SettingsPage() {
     email: string | null;
     tax_id: string | null;
     bank_info: string | null;
+    charge_customer_shipping: boolean;
+    free_ship_min_qty: number;
+    customer_ship_fee: number;
   } | undefined;
 
   return (

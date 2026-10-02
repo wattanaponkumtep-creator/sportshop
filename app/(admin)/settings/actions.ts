@@ -59,6 +59,9 @@ const shopInfoSchema = z.object({
   email: z.string().trim().optional().nullable(),
   tax_id: z.string().trim().optional().nullable(),
   bank_info: z.string().trim().optional().nullable(),
+  charge_customer_shipping: z.coerce.boolean().default(false),
+  free_ship_min_qty: z.coerce.number().int().min(1).default(50),
+  customer_ship_fee: z.coerce.number().min(0).default(0),
 });
 
 export type ShopInfoInput = z.input<typeof shopInfoSchema>;
@@ -82,6 +85,9 @@ export async function updateShopInfo(input: ShopInfoInput) {
       email: parsed.data.email || null,
       tax_id: parsed.data.tax_id || null,
       bank_info: parsed.data.bank_info || null,
+      charge_customer_shipping: parsed.data.charge_customer_shipping,
+      free_ship_min_qty: parsed.data.free_ship_min_qty,
+      customer_ship_fee: parsed.data.customer_ship_fee,
       updated_at: new Date().toISOString(),
     })
     .eq("id", 1);

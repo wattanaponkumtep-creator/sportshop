@@ -227,6 +227,7 @@ export interface Job {
   delivery_method: string | null;
   production_options: string[];
   factory_cost_paid_at: string | null;
+  customer_shipping_fee: number;
 }
 
 export interface JobItem {
@@ -350,6 +351,9 @@ export interface ShopInfo {
   logo_url: string | null;
   bank_balance: number | null;
   bank_balance_updated_at: string | null;
+  charge_customer_shipping: boolean;
+  free_ship_min_qty: number;
+  customer_ship_fee: number;
   updated_at: string;
 }
 

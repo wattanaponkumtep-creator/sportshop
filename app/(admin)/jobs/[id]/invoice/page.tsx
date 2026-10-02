@@ -157,6 +157,14 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
                 {formatBaht(subtotal + Number(job.shipping_cost))}
               </td>
             </tr>
+            {Number(job.customer_shipping_fee ?? 0) > 0 && (
+              <tr>
+                <td colSpan={3} className="p-2 pr-4 text-right text-xs text-gray-500">
+                  (รวมค่าจัดส่ง {formatBaht(Number(job.customer_shipping_fee))} — ออเดอร์ขนาดเล็ก)
+                </td>
+                <td></td>
+              </tr>
+            )}
             {discount > 0 && (
               <tr>
                 <td colSpan={3} className="p-2 pr-4 text-right text-sm text-rose-700">

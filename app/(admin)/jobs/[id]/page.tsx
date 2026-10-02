@@ -126,6 +126,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               (s, p) => s + (p.type === "refund" ? -Number(p.amount) : Number(p.amount)),
               0,
             )}
+            customerShippingFee={Number(job.customer_shipping_fee ?? 0)}
             shopInfo={shopInfo ? { shop_name: shopInfo.shop_name, bank_info: shopInfo.bank_info } : null}
           />
           <CopyTrackLink trackToken={job.track_token} />

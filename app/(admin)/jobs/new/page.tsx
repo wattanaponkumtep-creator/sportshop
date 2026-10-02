@@ -9,10 +9,16 @@ export default async function NewJobPage({ searchParams }: { searchParams: Promi
   const { customer: preselectedCustomerId } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: customers }, { data: factories }] = await Promise.all([
+  const [{ data: customers }, { data: factories }, { data: shop }] = await Promise.all([
     supabase.from("customers").select("id, name").order("created_at", { ascending: false }).limit(500),
     supabase.from("factories").select("id, name").eq("is_active", true).order("name"),
+    supabase.from("shop_info").select("charge_customer_shipping, free_ship_min_qty, customer_ship_fee").eq("id", 1).maybeSingle(),
   ]);
+
+  const policy = shop as { charge_customer_shipping: boolean; free_ship_min_qty: number; customer_ship_fee: number } | null;
+  const shippingPolicy = policy?.charge_customer_shipping
+    ? { minQty: Number(policy.free_ship_min_qty), fee: Number(policy.customer_ship_fee) }
+    : null;
 
   return (
     <div className="container max-w-4xl space-y-4 p-3 sm:space-y-6 sm:p-4 md:p-8">
@@ -27,6 +33,7 @@ export default async function NewJobPage({ searchParams }: { searchParams: Promi
         customers={customers ?? []}
         factories={factories ?? []}
         preselectedCustomerId={preselectedCustomerId}
+        shippingPolicy={shippingPolicy}
       />
     </div>
   );

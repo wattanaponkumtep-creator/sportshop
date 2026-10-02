@@ -17,10 +17,12 @@ const PRIORITIES: PriorityLevel[] = ["normal", "urgent", "rush"];
 export function JobForm({
   customers,
   factories,
+  shippingPolicy,
 }: {
   customers: { id: string; name: string }[];
   factories: { id: string; name: string }[];
   preselectedCustomerId?: string;
+  shippingPolicy?: { minQty: number; fee: number } | null;
 }) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -44,6 +46,9 @@ export function JobForm({
   });
   const factoryId = watch("factory_id");
   const priority = watch("priority");
+  const qtyWatch = Number(watch("quantity")) || 0;
+  const salePriceWatch = Number(watch("sale_price")) || 0;
+  const shipApplies = !!shippingPolicy && shippingPolicy.fee > 0 && qtyWatch > 0 && qtyWatch < shippingPolicy.minQty;
 
   function onSubmit(data: NewJobInput) {
     setServerError(null);
@@ -134,7 +139,7 @@ export function JobForm({
         <CardHeader><CardTitle>การเงิน</CardTitle></CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="sale_price">ราคาขาย (บาท)</Label>
+            <Label htmlFor="sale_price">ราคาขาย / ค่าสินค้า (บาท)</Label>
             <Input id="sale_price" type="number" step="0.01" min="0" {...register("sale_price")} />
           </div>
           <div className="space-y-2">
@@ -142,13 +147,32 @@ export function JobForm({
             <Input id="cost" type="number" step="0.01" min="0" {...register("cost")} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="shipping_cost">ค่าส่ง (บาท)</Label>
+            <Label htmlFor="shipping_cost">ค่าส่ง-ต้นทุนร้าน (บาท)</Label>
             <Input id="shipping_cost" type="number" step="0.01" min="0" {...register("shipping_cost")} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="other_cost">ค่าอื่น ๆ (บาท)</Label>
             <Input id="other_cost" type="number" step="0.01" min="0" {...register("other_cost")} />
           </div>
+
+          {/* นโยบายค่าส่งลูกค้า — โชว์ให้เห็นก่อนบันทึก */}
+          {shipApplies && (
+            <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/5 p-3 text-sm sm:col-span-2">
+              <div className="font-medium text-cyan-300">
+                🚚 สั่ง {qtyWatch} ตัว (น้อยกว่า {shippingPolicy!.minQty}) → บวกค่าส่งลูกค้าอัตโนมัติ
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                ค่าสินค้า ฿{salePriceWatch.toLocaleString()} + ค่าส่ง ฿{shippingPolicy!.fee.toLocaleString()} ={" "}
+                <span className="font-semibold text-foreground">ลูกค้าจ่ายรวม ฿{(salePriceWatch + shippingPolicy!.fee).toLocaleString()}</span>
+                {" "}· จะแสดงในบิล/ข้อความแจ้งลูกค้า
+              </div>
+            </div>
+          )}
+          {!!shippingPolicy && qtyWatch >= shippingPolicy.minQty && qtyWatch > 0 && (
+            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-2.5 text-xs text-emerald-300 sm:col-span-2">
+              ✅ สั่ง {qtyWatch} ตัว ({shippingPolicy.minQty}+) → ส่งฟรี ไม่คิดค่าส่ง
+            </div>
+          )}
         </CardContent>
       </Card>
 

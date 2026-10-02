@@ -74,6 +74,23 @@ export async function createJob(input: NewJobInput) {
     customerId = (newCust as { id: string }).id;
   }
 
+  // นโยบายค่าส่งลูกค้า: สั่งน้อยกว่าเกณฑ์ → บวกค่าส่งเข้าราคารวม
+  let customerShippingFee = 0;
+  let saleWithShipping = parsed.data.sale_price;
+  const qty = parsed.data.quantity;
+  if (qty > 0) {
+    const { data: shop } = await supabase
+      .from("shop_info")
+      .select("charge_customer_shipping, free_ship_min_qty, customer_ship_fee")
+      .eq("id", 1)
+      .maybeSingle();
+    const policy = shop as { charge_customer_shipping: boolean; free_ship_min_qty: number; customer_ship_fee: number } | null;
+    if (policy?.charge_customer_shipping && qty < Number(policy.free_ship_min_qty) && Number(policy.customer_ship_fee) > 0) {
+      customerShippingFee = Number(policy.customer_ship_fee);
+      saleWithShipping = parsed.data.sale_price + customerShippingFee;
+    }
+  }
+
   const { data: job, error } = await supabase
     .from("jobs")
     .insert({
@@ -81,7 +98,8 @@ export async function createJob(input: NewJobInput) {
       job_label: parsed.data.job_label || null,
       product_type: parsed.data.product_type || null,
       quantity: parsed.data.quantity,
-      sale_price: parsed.data.sale_price,
+      sale_price: saleWithShipping,
+      customer_shipping_fee: customerShippingFee,
       cost: parsed.data.cost,
       shipping_cost: parsed.data.shipping_cost,
       other_cost: parsed.data.other_cost,

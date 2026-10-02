@@ -2581,3 +2581,14 @@ alter table public.shop_info
 -- =========================================================================
 alter table public.jobs
   add column if not exists delivery_method text;
+
+
+-- =========================================================================
+-- ==================== 0032_customer_shipping.sql ====================
+-- =========================================================================
+alter table public.jobs
+  add column if not exists customer_shipping_fee numeric(10,2) not null default 0;
+alter table public.shop_info
+  add column if not exists charge_customer_shipping boolean not null default false,
+  add column if not exists free_ship_min_qty int not null default 50,
+  add column if not exists customer_ship_fee numeric(10,2) not null default 0;
