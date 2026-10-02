@@ -31,14 +31,24 @@ export default async function HomePage() {
   const [{ data: portfolioData }, { data: catalogData }, { data: shopRows }] = await Promise.all([
     supabase.rpc("get_public_portfolio"),
     supabase.rpc("get_public_catalog"),
-    supabase.from("shop_info").select("shop_name, phone").eq("id", 1).limit(1),
+    supabase.from("shop_info").select("shop_name, phone, charge_customer_shipping, free_ship_min_qty, customer_ship_fee").eq("id", 1).limit(1),
   ]);
 
   const allDesigns = (portfolioData as unknown as PublicDesign[]) ?? [];
   const featuredDesigns = allDesigns.slice(0, 8);
   const categories = (catalogData as unknown as CatalogCategory[]) ?? [];
-  const shop = shopRows?.[0] as { shop_name: string | null; phone: string | null } | undefined;
+  const shop = shopRows?.[0] as {
+    shop_name: string | null;
+    phone: string | null;
+    charge_customer_shipping?: boolean;
+    free_ship_min_qty?: number;
+    customer_ship_fee?: number;
+  } | undefined;
   const shopName = shop?.shop_name ?? "SportShop";
+  const shipPolicy =
+    shop?.charge_customer_shipping && Number(shop.customer_ship_fee) > 0
+      ? { minQty: Number(shop.free_ship_min_qty), fee: Number(shop.customer_ship_fee) }
+      : null;
 
   // Sign portfolio thumbnails (1 batch)
   const thumbs = featuredDesigns.map((d) => d.thumbnail_path).filter((p): p is string => !!p);
@@ -83,6 +93,16 @@ export default async function HomePage() {
                 <Palette className="h-4 w-4" /> ดูผลงาน
               </Link>
             </div>
+
+            {shipPolicy && (
+              <div className="mx-auto mt-5 inline-flex max-w-xl items-center gap-2 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-4 py-2 text-xs text-cyan-200 sm:text-sm">
+                <span className="text-base">🚚</span>
+                <span>
+                  สั่งตั้งแต่ <strong className="text-white">{shipPolicy.minQty} ตัวขึ้นไป ส่งฟรี!</strong>{" "}
+                  · น้อยกว่า {shipPolicy.minQty} ตัว มีค่าจัดส่ง {new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 }).format(shipPolicy.fee)}
+                </span>
+              </div>
+            )}
 
             <div className="mx-auto mt-10 grid max-w-2xl grid-cols-3 gap-3 text-center sm:mt-14">
               {[

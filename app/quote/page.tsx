@@ -1,10 +1,24 @@
 import { PublicHeader, PublicFooter } from "@/components/public/public-layout";
-import { Sparkles, Clock, Shield, Award } from "lucide-react";
+import { Sparkles, Clock, Shield, Award, Truck } from "lucide-react";
+import { createServiceClient } from "@/lib/supabase/server";
 import { QuoteForm } from "./quote-form";
 
 export const dynamic = "force-dynamic";
 
-export default function QuotePage() {
+export default async function QuotePage() {
+  const supabase = createServiceClient();
+  const { data: shopRows } = await supabase
+    .from("shop_info")
+    .select("charge_customer_shipping, free_ship_min_qty, customer_ship_fee")
+    .eq("id", 1)
+    .limit(1);
+  const shop = shopRows?.[0] as { charge_customer_shipping?: boolean; free_ship_min_qty?: number; customer_ship_fee?: number } | undefined;
+  const shipPolicy =
+    shop?.charge_customer_shipping && Number(shop.customer_ship_fee) > 0
+      ? { minQty: Number(shop.free_ship_min_qty), fee: Number(shop.customer_ship_fee) }
+      : null;
+  const fmtBaht = (n: number) => new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 }).format(n);
+
   return (
     <>
       <PublicHeader />
@@ -40,6 +54,22 @@ export default function QuotePage() {
             ))}
           </div>
         </section>
+
+        {/* นโยบายค่าส่ง */}
+        {shipPolicy && (
+          <section className="container mx-auto max-w-4xl px-4 pt-3">
+            <div className="flex items-start gap-3 rounded-lg border border-cyan-500/30 bg-cyan-500/5 p-3 sm:p-4">
+              <Truck className="mt-0.5 h-5 w-5 shrink-0 text-cyan-400" />
+              <div className="text-sm">
+                <div className="font-semibold text-cyan-200">นโยบายค่าจัดส่ง</div>
+                <div className="mt-0.5 text-muted-foreground">
+                  สั่งตั้งแต่ <strong className="text-foreground">{shipPolicy.minQty} ตัวขึ้นไป — ส่งฟรี</strong> ·
+                  สั่งน้อยกว่า {shipPolicy.minQty} ตัว มีค่าจัดส่ง <strong className="text-foreground">{fmtBaht(shipPolicy.fee)}</strong> (คิดรวมในใบเสนอราคา)
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Form */}
         <section className="container mx-auto max-w-4xl px-4 py-6 sm:py-8">
