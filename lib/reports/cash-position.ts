@@ -10,7 +10,7 @@ export async function getCashPosition() {
   const [{ data: payments }, { data: expenses }, { data: jobs }, { data: shop }] = await Promise.all([
     supabase.from("payments").select("job_id, type, amount, created_at"),
     supabase.from("expenses").select("amount, created_at"),
-    supabase.from("jobs").select("id, status, sale_price, discount, cost, shipping_cost, other_cost, factory_cost_paid_at, factory_id"),
+    supabase.from("jobs").select("id, status, sale_price, discount, cost, shipping_cost, other_cost, customer_shipping_fee, factory_cost_paid_at, factory_id"),
     supabase.from("shop_info").select("bank_balance, bank_balance_updated_at").eq("id", 1).maybeSingle(),
   ]);
 
@@ -24,6 +24,7 @@ export async function getCashPosition() {
     cost: number;
     shipping_cost: number;
     other_cost: number;
+    customer_shipping_fee: number;
     factory_cost_paid_at: string | null;
     factory_id: string | null;
   }[];
@@ -50,7 +51,7 @@ export async function getCashPosition() {
   let outstandingReceivable = 0;
   for (const j of js) {
     if (j.status === "cancelled") continue;
-    const net = Math.max(0, Number(j.sale_price ?? 0) - Number(j.discount ?? 0));
+    const net = Math.max(0, Number(j.sale_price ?? 0) - Number(j.discount ?? 0)) + Number(j.customer_shipping_fee ?? 0);
     outstandingReceivable += Math.max(0, net - (paidByJob.get(j.id) ?? 0));
   }
 
@@ -93,7 +94,7 @@ export async function getCashPosition() {
     const delivered = j.status === "shipped" || j.status === "completed";
     if (!delivered) continue;
     if (!j.factory_cost_paid_at) continue; // ยังไม่ได้จ่ายโรงงาน = ยังไม่จบวงจร
-    const net = Math.max(0, Number(j.sale_price ?? 0) - Number(j.discount ?? 0));
+    const net = Math.max(0, Number(j.sale_price ?? 0) - Number(j.discount ?? 0)) + Number(j.customer_shipping_fee ?? 0);
     if (net <= 0) continue;
     if ((paidByJob.get(j.id) ?? 0) < net) continue; // ลูกค้ายังจ่ายไม่ครบ = ยังไม่จบวงจร
     const totalCost = Number(j.cost ?? 0) + Number(j.shipping_cost ?? 0) + Number(j.other_cost ?? 0);

@@ -40,10 +40,15 @@ export function ShopInfoForm({ initial }: { initial: ShopInfo | null }) {
   const [bankInfo, setBankInfo] = useState(initial?.bank_info ?? "");
   const [chargeShip, setChargeShip] = useState(initial?.charge_customer_shipping ?? false);
   const [minQty, setMinQty] = useState(String(initial?.free_ship_min_qty ?? 50));
+  const [shipMode, setShipMode] = useState<"actual" | "fixed">(
+    (initial?.customer_ship_fee ?? 0) > 0 ? "fixed" : "actual",
+  );
   const [shipFee, setShipFee] = useState(String(initial?.customer_ship_fee ?? 0));
   const [isPending, startTransition] = useTransition();
 
   function handleSave() {
+    // ตามจริง → เก็บค่าส่ง = 0 (ไม่ล็อกตัวเลข) · ตายตัว → เก็บตามที่กรอก
+    const feeToSave = shipMode === "fixed" ? Math.max(0, Number(shipFee) || 0) : 0;
     startTransition(async () => {
       const result = await updateShopInfo({
         shop_name: shopName,
@@ -54,7 +59,7 @@ export function ShopInfoForm({ initial }: { initial: ShopInfo | null }) {
         bank_info: bankInfo || null,
         charge_customer_shipping: chargeShip,
         free_ship_min_qty: Math.max(1, Number(minQty) || 50),
-        customer_ship_fee: Math.max(0, Number(shipFee) || 0),
+        customer_ship_fee: feeToSave,
       });
       if (result.ok) {
         toast({ title: "บันทึกข้อมูลร้านแล้ว ✅" });
@@ -161,19 +166,47 @@ export function ShopInfoForm({ initial }: { initial: ShopInfo | null }) {
           </label>
 
           {chargeShip && (
-            <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-cyan-500/20 pt-3">
+            <div className="mt-3 space-y-3 border-t border-cyan-500/20 pt-3">
               <div className="space-y-1">
                 <Label className="text-xs">ส่งฟรีเมื่อสั่งตั้งแต่ (ตัว)</Label>
                 <Input type="number" min="1" value={minQty} onChange={(e) => setMinQty(e.target.value)} className="h-9 w-28" />
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">ค่าส่ง (บาท)</Label>
-                <Input type="number" min="0" value={shipFee} onChange={(e) => setShipFee(e.target.value)} className="h-9 w-28" />
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">คิดค่าส่งแบบ</Label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShipMode("actual")}
+                    className={`rounded-md border-2 px-3 py-1.5 text-xs transition ${shipMode === "actual" ? "border-cyan-400 bg-cyan-500/15 font-medium" : "border-border text-muted-foreground hover:border-cyan-400/40"}`}
+                  >
+                    📍 ตามจริง (แจ้งลูกค้าภายหลัง)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShipMode("fixed")}
+                    className={`rounded-md border-2 px-3 py-1.5 text-xs transition ${shipMode === "fixed" ? "border-cyan-400 bg-cyan-500/15 font-medium" : "border-border text-muted-foreground hover:border-cyan-400/40"}`}
+                  >
+                    🏷️ ตายตัว (ระบุจำนวน)
+                  </button>
+                </div>
               </div>
+
+              {shipMode === "fixed" && (
+                <div className="space-y-1">
+                  <Label className="text-xs">ค่าส่ง (บาท)</Label>
+                  <Input type="number" min="0" value={shipFee} onChange={(e) => setShipFee(e.target.value)} className="h-9 w-28" />
+                </div>
+              )}
+
               <div className="rounded-md border border-cyan-500/30 bg-card/40 p-2 text-[11px] text-muted-foreground">
                 📦 สั่ง <strong className="text-foreground">1–{(Number(minQty) || 50) - 1}</strong> ตัว คิดค่าส่ง{" "}
-                <strong className="text-cyan-300">{formatBaht(Number(shipFee) || 0)}</strong> ·{" "}
-                <strong className="text-foreground">{Number(minQty) || 50}+</strong> ตัว ส่งฟรี
+                {shipMode === "fixed" ? (
+                  <strong className="text-cyan-300">{formatBaht(Number(shipFee) || 0)}</strong>
+                ) : (
+                  <strong className="text-cyan-300">ตามจริง (ตามระยะทาง/ขนส่ง)</strong>
+                )}{" "}
+                · <strong className="text-foreground">{Number(minQty) || 50}+</strong> ตัว ส่งฟรี
               </div>
             </div>
           )}

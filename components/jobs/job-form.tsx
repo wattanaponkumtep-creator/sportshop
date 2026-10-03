@@ -48,7 +48,8 @@ export function JobForm({
   const priority = watch("priority");
   const qtyWatch = Number(watch("quantity")) || 0;
   const salePriceWatch = Number(watch("sale_price")) || 0;
-  const shipApplies = !!shippingPolicy && shippingPolicy.fee > 0 && qtyWatch > 0 && qtyWatch < shippingPolicy.minQty;
+  const shipApplies = !!shippingPolicy && qtyWatch > 0 && qtyWatch < shippingPolicy.minQty;
+  const shipFixed = shipApplies && shippingPolicy!.fee > 0;
 
   function onSubmit(data: NewJobInput) {
     setServerError(null);
@@ -156,7 +157,7 @@ export function JobForm({
           </div>
 
           {/* นโยบายค่าส่งลูกค้า — โชว์ให้เห็นก่อนบันทึก */}
-          {shipApplies && (
+          {shipFixed && (
             <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/5 p-3 text-sm sm:col-span-2">
               <div className="font-medium text-cyan-300">
                 🚚 สั่ง {qtyWatch} ตัว (น้อยกว่า {shippingPolicy!.minQty}) → บวกค่าส่งลูกค้าอัตโนมัติ
@@ -165,6 +166,16 @@ export function JobForm({
                 ค่าสินค้า ฿{salePriceWatch.toLocaleString()} + ค่าส่ง ฿{shippingPolicy!.fee.toLocaleString()} ={" "}
                 <span className="font-semibold text-foreground">ลูกค้าจ่ายรวม ฿{(salePriceWatch + shippingPolicy!.fee).toLocaleString()}</span>
                 {" "}· จะแสดงในบิล/ข้อความแจ้งลูกค้า
+              </div>
+            </div>
+          )}
+          {shipApplies && !shipFixed && (
+            <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/5 p-3 text-sm sm:col-span-2">
+              <div className="font-medium text-cyan-300">
+                🚚 สั่ง {qtyWatch} ตัว (น้อยกว่า {shippingPolicy!.minQty}) → มีค่าจัดส่ง (ตามจริง)
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                ออเดอร์เล็กต้องคิดค่าส่ง — ใส่ยอดจริงตอนรู้ค่าส่ง (ช่อง &quot;ค่าส่งที่คิดลูกค้า&quot; ในแท็บรายละเอียด/ตอนแจ้งเก็บเงิน)
               </div>
             </div>
           )}

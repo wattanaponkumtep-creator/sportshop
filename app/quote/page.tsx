@@ -13,10 +13,9 @@ export default async function QuotePage() {
     .eq("id", 1)
     .limit(1);
   const shop = shopRows?.[0] as { charge_customer_shipping?: boolean; free_ship_min_qty?: number; customer_ship_fee?: number } | undefined;
-  const shipPolicy =
-    shop?.charge_customer_shipping && Number(shop.customer_ship_fee) > 0
-      ? { minQty: Number(shop.free_ship_min_qty), fee: Number(shop.customer_ship_fee) }
-      : null;
+  const shipPolicy = shop?.charge_customer_shipping
+    ? { minQty: Number(shop.free_ship_min_qty), fee: Number(shop.customer_ship_fee) }
+    : null;
   const fmtBaht = (n: number) => new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 }).format(n);
 
   return (
@@ -64,7 +63,9 @@ export default async function QuotePage() {
                 <div className="font-semibold text-cyan-200">นโยบายค่าจัดส่ง</div>
                 <div className="mt-0.5 text-muted-foreground">
                   สั่งตั้งแต่ <strong className="text-foreground">{shipPolicy.minQty} ตัวขึ้นไป — ส่งฟรี</strong> ·
-                  สั่งน้อยกว่า {shipPolicy.minQty} ตัว มีค่าจัดส่ง <strong className="text-foreground">{fmtBaht(shipPolicy.fee)}</strong> (คิดรวมในใบเสนอราคา)
+                  สั่งน้อยกว่า {shipPolicy.minQty} ตัว มีค่าจัดส่ง{" "}
+                  <strong className="text-foreground">{shipPolicy.fee > 0 ? fmtBaht(shipPolicy.fee) : "ตามจริง (ตามระยะทาง/ขนส่ง)"}</strong>
+                  {shipPolicy.fee > 0 ? " (คิดรวมในใบเสนอราคา)" : " — ทางร้านแจ้งยอดในใบเสนอราคา"}
                 </div>
               </div>
             </div>

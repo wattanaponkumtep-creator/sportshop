@@ -29,6 +29,7 @@ type EditInput = {
   job_label: string;
   delivery_address: string;
   delivery_method: string;
+  customer_shipping_fee: number;
 };
 
 const PRIORITIES: PriorityLevel[] = ["normal", "urgent", "rush"];
@@ -70,6 +71,7 @@ export function JobDetailsPanel({ job, factories }: { job: Job; factories: { id:
       job_label: job.job_label ?? "",
       delivery_address: job.delivery_address ?? "",
       delivery_method: job.delivery_method ?? "",
+      customer_shipping_fee: Number(job.customer_shipping_fee ?? 0),
     },
   });
   const factoryId = watch("factory_id");
@@ -219,22 +221,31 @@ export function JobDetailsPanel({ job, factories }: { job: Job; factories: { id:
       <Card>
         <CardHeader><CardTitle>การจัดส่ง</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-1.5">
-            <Label>วิธีจัดส่ง / ขนส่ง</Label>
-            <datalist id="delivery-methods">
-              {DELIVERY_METHOD_PRESETS.map((m) => (
-                <option key={m} value={m} />
-              ))}
-            </datalist>
-            <Input
-              list="delivery-methods"
-              {...register("delivery_method")}
-              placeholder="เช่น รถทัวร์ (บขส.), Kerry, Flash, ไปรษณีย์..."
-              autoComplete="off"
-            />
-            <p className="text-xs text-muted-foreground">
-              💡 บอกโรงงานว่างานนี้ส่งด้วยขนส่งอะไร — จะแสดงในใบสั่งงาน
-            </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>วิธีจัดส่ง / ขนส่ง</Label>
+              <datalist id="delivery-methods">
+                {DELIVERY_METHOD_PRESETS.map((m) => (
+                  <option key={m} value={m} />
+                ))}
+              </datalist>
+              <Input
+                list="delivery-methods"
+                {...register("delivery_method")}
+                placeholder="เช่น รถทัวร์ (บขส.), Kerry, Flash, ไปรษณีย์..."
+                autoComplete="off"
+              />
+              <p className="text-xs text-muted-foreground">
+                💡 บอกโรงงานว่าส่งด้วยขนส่งอะไร — แสดงในใบสั่งงาน
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>ค่าส่งที่คิดลูกค้า (บาท)</Label>
+              <Input type="number" step="0.01" min="0" {...register("customer_shipping_fee")} placeholder="0" />
+              <p className="text-xs text-muted-foreground">
+                💡 ใส่ยอดค่าส่งจริงเมื่อรู้ — จะ<strong>บวกเข้าบิล + แสดงให้ลูกค้า</strong> (แยกจากราคาสินค้า)
+              </p>
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label>ที่อยู่จัดส่ง</Label>

@@ -29,6 +29,7 @@ type JobRow = {
   sale_price: number;
   discount: number;
   cost: number;
+  customer_shipping_fee: number;
   factory_cost_paid_at: string | null;
   due_date: string | null;
   customers: { name: string } | { name: string }[] | null;
@@ -46,7 +47,7 @@ export async function getReceivables() {
   const [{ data: jobs }, { data: payments }] = await Promise.all([
     supabase
       .from("jobs")
-      .select("id, job_code, job_label, status, sale_price, discount, cost, factory_cost_paid_at, due_date, customers(name)")
+      .select("id, job_code, job_label, status, sale_price, discount, cost, customer_shipping_fee, factory_cost_paid_at, due_date, customers(name)")
       .neq("status", "cancelled")
       .order("due_date", { ascending: true, nullsFirst: false }),
     supabase.from("payments").select("job_id, type, amount"),
@@ -69,7 +70,7 @@ export async function getReceivables() {
   const paidList: ReceivableJob[] = [];
 
   for (const j of js) {
-    const net = Math.max(0, Number(j.sale_price ?? 0) - Number(j.discount ?? 0));
+    const net = Math.max(0, Number(j.sale_price ?? 0) - Number(j.discount ?? 0)) + Number(j.customer_shipping_fee ?? 0);
     if (net <= 0) continue; // ไม่มียอด — ข้าม
     const paid = paidByJob.get(j.id) ?? 0;
     const remaining = Math.max(0, net - paid);

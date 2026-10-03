@@ -121,7 +121,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             customerName={customer?.name ?? ""}
             phone={customer?.phone ?? null}
             channels={customerChannels ?? []}
-            salePrice={Math.max(0, Number(job.sale_price) - Number(job.discount ?? 0))}
+            salePrice={Math.max(0, Number(job.sale_price) - Number(job.discount ?? 0)) + Number(job.customer_shipping_fee ?? 0)}
             totalPaid={(payments ?? []).reduce(
               (s, p) => s + (p.type === "refund" ? -Number(p.amount) : Number(p.amount)),
               0,
@@ -215,7 +215,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             customerPhone={customer?.phone ?? null}
             customerChannels={customerChannels ?? []}
             shopInfo={shopInfo ?? null}
-            salePrice={Number(job.sale_price)}
+            salePrice={Number(job.sale_price) + Number(job.customer_shipping_fee ?? 0)}
             discount={Number(job.discount ?? 0)}
             cost={Number(job.cost ?? 0)}
             shippingCost={Number(job.shipping_cost ?? 0)}

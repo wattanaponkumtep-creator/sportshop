@@ -34,8 +34,10 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
     0
   );
   const discount = Number(job.discount ?? 0);
-  const netTotal = Math.max(0, Number(job.sale_price) - discount);
-  const balance = netTotal - totalPaid;
+  const shippingFee = Number(job.customer_shipping_fee ?? 0);
+  const netTotal = Math.max(0, Number(job.sale_price) - discount); // ราคาสินค้าสุทธิ (ยังไม่รวมค่าส่ง)
+  const grandTotal = netTotal + shippingFee;                        // ยอดรวมที่ลูกค้าต้องจ่าย
+  const balance = grandTotal - totalPaid;
 
   // Group items by size for invoice line items
   const sizeGroups = new Map<string, number>();
@@ -152,19 +154,11 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={3} className="p-2 pr-4 text-right text-sm">ยอดรวมก่อนหักส่วนลด</td>
+              <td colSpan={3} className="p-2 pr-4 text-right text-sm">ยอดรวมค่าสินค้า</td>
               <td className="p-2 text-right font-mono text-sm font-semibold">
-                {formatBaht(subtotal + Number(job.shipping_cost))}
+                {formatBaht(subtotal)}
               </td>
             </tr>
-            {Number(job.customer_shipping_fee ?? 0) > 0 && (
-              <tr>
-                <td colSpan={3} className="p-2 pr-4 text-right text-xs text-gray-500">
-                  (รวมค่าจัดส่ง {formatBaht(Number(job.customer_shipping_fee))} — ออเดอร์ขนาดเล็ก)
-                </td>
-                <td></td>
-              </tr>
-            )}
             {discount > 0 && (
               <tr>
                 <td colSpan={3} className="p-2 pr-4 text-right text-sm text-rose-700">
@@ -175,11 +169,19 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
                 </td>
               </tr>
             )}
-            {discount > 0 && (
+            {shippingFee > 0 && (
               <tr>
-                <td colSpan={3} className="p-2 pr-4 text-right text-sm font-semibold">ราคาสุทธิ</td>
+                <td colSpan={3} className="p-2 pr-4 text-right text-sm">ค่าจัดส่ง</td>
+                <td className="p-2 text-right font-mono text-sm font-semibold">
+                  {formatBaht(shippingFee)}
+                </td>
+              </tr>
+            )}
+            {(discount > 0 || shippingFee > 0) && (
+              <tr>
+                <td colSpan={3} className="p-2 pr-4 text-right text-sm font-semibold">ยอดรวมสุทธิ</td>
                 <td className="p-2 text-right font-mono text-sm font-bold">
-                  {formatBaht(netTotal + Number(job.shipping_cost))}
+                  {formatBaht(grandTotal)}
                 </td>
               </tr>
             )}

@@ -74,9 +74,9 @@ export async function createJob(input: NewJobInput) {
     customerId = (newCust as { id: string }).id;
   }
 
-  // นโยบายค่าส่งลูกค้า: สั่งน้อยกว่าเกณฑ์ → บวกค่าส่งเข้าราคารวม
+  // นโยบายค่าส่งลูกค้า: สั่งน้อยกว่าเกณฑ์ → คิดค่าส่ง (เฉพาะโหมดตายตัวถึงจะใส่ยอดอัตโนมัติ)
+  // โหมดตามจริง (fee=0) → ปล่อยไว้ 0 ให้กรอกยอดจริงทีหลัง · ค่าส่งเป็นยอดบวกแยกจากราคาขาย
   let customerShippingFee = 0;
-  let saleWithShipping = parsed.data.sale_price;
   const qty = parsed.data.quantity;
   if (qty > 0) {
     const { data: shop } = await supabase
@@ -87,7 +87,6 @@ export async function createJob(input: NewJobInput) {
     const policy = shop as { charge_customer_shipping: boolean; free_ship_min_qty: number; customer_ship_fee: number } | null;
     if (policy?.charge_customer_shipping && qty < Number(policy.free_ship_min_qty) && Number(policy.customer_ship_fee) > 0) {
       customerShippingFee = Number(policy.customer_ship_fee);
-      saleWithShipping = parsed.data.sale_price + customerShippingFee;
     }
   }
 
@@ -98,7 +97,7 @@ export async function createJob(input: NewJobInput) {
       job_label: parsed.data.job_label || null,
       product_type: parsed.data.product_type || null,
       quantity: parsed.data.quantity,
-      sale_price: saleWithShipping,
+      sale_price: parsed.data.sale_price,
       customer_shipping_fee: customerShippingFee,
       cost: parsed.data.cost,
       shipping_cost: parsed.data.shipping_cost,
@@ -151,6 +150,7 @@ const editJobSchema = z.object({
   job_label: z.string().trim().nullable().optional(),
   quantity: z.coerce.number().int().min(0),
   sale_price: z.coerce.number().min(0),
+  customer_shipping_fee: z.coerce.number().min(0).optional(),
   cost: z.coerce.number().min(0),
   shipping_cost: z.coerce.number().min(0),
   other_cost: z.coerce.number().min(0),
@@ -173,6 +173,7 @@ export async function updateJob(jobId: string, input: z.input<typeof editJobSche
     job_label: parsed.data.job_label || null,
     quantity: parsed.data.quantity,
     sale_price: parsed.data.sale_price,
+    ...(parsed.data.customer_shipping_fee !== undefined ? { customer_shipping_fee: parsed.data.customer_shipping_fee } : {}),
     cost: parsed.data.cost,
     shipping_cost: parsed.data.shipping_cost,
     other_cost: parsed.data.other_cost,

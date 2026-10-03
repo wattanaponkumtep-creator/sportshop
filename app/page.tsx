@@ -45,10 +45,9 @@ export default async function HomePage() {
     customer_ship_fee?: number;
   } | undefined;
   const shopName = shop?.shop_name ?? "SportShop";
-  const shipPolicy =
-    shop?.charge_customer_shipping && Number(shop.customer_ship_fee) > 0
-      ? { minQty: Number(shop.free_ship_min_qty), fee: Number(shop.customer_ship_fee) }
-      : null;
+  const shipPolicy = shop?.charge_customer_shipping
+    ? { minQty: Number(shop.free_ship_min_qty), fee: Number(shop.customer_ship_fee) }
+    : null;
 
   // Sign portfolio thumbnails (1 batch)
   const thumbs = featuredDesigns.map((d) => d.thumbnail_path).filter((p): p is string => !!p);
@@ -99,7 +98,10 @@ export default async function HomePage() {
                 <span className="text-base">🚚</span>
                 <span>
                   สั่งตั้งแต่ <strong className="text-white">{shipPolicy.minQty} ตัวขึ้นไป ส่งฟรี!</strong>{" "}
-                  · น้อยกว่า {shipPolicy.minQty} ตัว มีค่าจัดส่ง {new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 }).format(shipPolicy.fee)}
+                  · น้อยกว่า {shipPolicy.minQty} ตัว มีค่าจัดส่ง{" "}
+                  {shipPolicy.fee > 0
+                    ? new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB", maximumFractionDigits: 0 }).format(shipPolicy.fee)
+                    : "ตามจริง"}
                 </span>
               </div>
             )}

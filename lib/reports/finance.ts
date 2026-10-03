@@ -15,6 +15,7 @@ type ClosedJobRow = {
   cost: number;
   shipping_cost: number;
   other_cost: number;
+  customer_shipping_fee: number;
   product_type: string | null;
   updated_at: string;
   received_at: string;
@@ -54,6 +55,11 @@ function net(sale: number, discount: number) {
   return Math.max(0, Number(sale ?? 0) - Number(discount ?? 0));
 }
 
+// ยอดที่ลูกค้าต้องจ่าย = ราคาสุทธิ + ค่าส่งที่คิดลูกค้า
+function jobNet(j: { sale_price: number; discount: number; customer_shipping_fee?: number }) {
+  return net(j.sale_price, j.discount) + Number(j.customer_shipping_fee ?? 0);
+}
+
 export type FinanceMonth = {
   label: string;
   cashIn: number;
@@ -88,7 +94,7 @@ export async function getFinanceData(range: FinanceRange = "this_month") {
     supabase.from("expenses").select("category, amount, paid_at").gte("paid_at", dataStart),
     supabase
       .from("jobs")
-      .select("id, job_code, job_label, status, sale_price, discount, cost, shipping_cost, other_cost, product_type, updated_at, received_at, customers(name)")
+      .select("id, job_code, job_label, status, sale_price, discount, cost, shipping_cost, other_cost, customer_shipping_fee, product_type, updated_at, received_at, customers(name)")
       // คิดกำไร/ต้นทุนงานตาม "เดือนที่เริ่มงาน" (received_at) — นับเฉพาะงานที่ปิดแล้ว
       .gte("received_at", dataStart)
       .in("status", ["shipped", "completed"]),
@@ -96,7 +102,7 @@ export async function getFinanceData(range: FinanceRange = "this_month") {
     // เอกสารรอ: งานที่ยังไม่ปิด
     supabase
       .from("jobs")
-      .select("id, status, sale_price, discount")
+      .select("id, status, sale_price, discount, customer_shipping_fee")
       .not("status", "in", "(completed,cancelled)"),
     // payments ทั้งหมด (สำหรับคำนวณยอดค้าง)
     supabase.from("payments").select("job_id, type, amount"),
@@ -124,7 +130,7 @@ export async function getFinanceData(range: FinanceRange = "this_month") {
     0,
   );
   const cashOut = rangedExpenses.reduce((s, e) => s + Number(e.amount), 0);
-  const revenue = rangedClosed.reduce((s, j) => s + net(j.sale_price, j.discount), 0);
+  const revenue = rangedClosed.reduce((s, j) => s + jobNet(j), 0);
   const cogs = rangedClosed.reduce(
     (s, j) => s + Number(j.cost ?? 0) + Number(j.shipping_cost ?? 0) + Number(j.other_cost ?? 0),
     0,
@@ -148,7 +154,7 @@ export async function getFinanceData(range: FinanceRange = "this_month") {
   const incByType = new Map<string, number>();
   for (const j of rangedClosed) {
     const t = (j.product_type ?? "").trim() || "ไม่ระบุประเภท";
-    incByType.set(t, (incByType.get(t) ?? 0) + net(j.sale_price, j.discount));
+    incByType.set(t, (incByType.get(t) ?? 0) + jobNet(j));
   }
   const incomeByType = Array.from(incByType.entries())
     .map(([type, amount]) => ({ type, amount }))
@@ -157,7 +163,7 @@ export async function getFinanceData(range: FinanceRange = "this_month") {
   // ---------- Per-job breakdown (ranged) — กำไร/ต้นทุนมาจากงานไหน ----------
   const jobBreakdown: JobProfitRow[] = rangedClosed
     .map((j) => {
-      const revenue = net(j.sale_price, j.discount);
+      const revenue = jobNet(j);
       const factoryCost = Number(j.cost ?? 0);
       const shippingCost = Number(j.shipping_cost ?? 0);
       const otherCost = Number(j.other_cost ?? 0);
@@ -191,7 +197,7 @@ export async function getFinanceData(range: FinanceRange = "this_month") {
       .reduce((s, p) => s + (p.type === "refund" ? -Number(p.amount) : Number(p.amount)), 0);
     const mCashOut = allExpenses.filter((e) => inMonth(e.paid_at)).reduce((s, e) => s + Number(e.amount), 0);
     const mClosed = closedJobs.filter((j) => inMonth(j.received_at));
-    const mRevenue = mClosed.reduce((s, j) => s + net(j.sale_price, j.discount), 0);
+    const mRevenue = mClosed.reduce((s, j) => s + jobNet(j), 0);
     const mCogs = mClosed.reduce(
       (s, j) => s + Number(j.cost ?? 0) + Number(j.shipping_cost ?? 0) + Number(j.other_cost ?? 0),
       0,
@@ -216,7 +222,7 @@ export async function getFinanceData(range: FinanceRange = "this_month") {
   }
 
   // ---------- Pending documents (snapshot) ----------
-  const open = (openJobs ?? []) as { id: string; status: string; sale_price: number; discount: number }[];
+  const open = (openJobs ?? []) as { id: string; status: string; sale_price: number; discount: number; customer_shipping_fee: number }[];
   const paidByJob = new Map<string, number>();
   for (const p of (allPaymentsForOutstanding ?? []) as { job_id: string; type: string; amount: number }[]) {
     paidByJob.set(p.job_id, (paidByJob.get(p.job_id) ?? 0) + (p.type === "refund" ? -Number(p.amount) : Number(p.amount)));
@@ -225,7 +231,7 @@ export async function getFinanceData(range: FinanceRange = "this_month") {
   let unpaidCount = 0;
   let unpaidAmount = 0;
   for (const j of open) {
-    const remaining = net(j.sale_price, j.discount) - (paidByJob.get(j.id) ?? 0);
+    const remaining = jobNet(j) - (paidByJob.get(j.id) ?? 0);
     if (remaining > 0) {
       unpaidCount++;
       unpaidAmount += remaining;

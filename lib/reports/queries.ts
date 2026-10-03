@@ -52,7 +52,7 @@ export function resolveRange(range: FinanceRange): { start: string; end: string;
 export type ReportJob = Pick<
   Job,
   | "id" | "job_code" | "job_label" | "status" | "sale_price" | "discount" | "cost" | "shipping_cost" | "other_cost"
-  | "quantity" | "received_at" | "due_date" | "updated_at" | "customer_id" | "factory_id"
+  | "customer_shipping_fee" | "quantity" | "received_at" | "due_date" | "updated_at" | "customer_id" | "factory_id"
 > & {
   customers?: { name: string } | { name: string }[] | null;
   factories?: { name: string } | { name: string }[] | null;
@@ -96,7 +96,7 @@ function isCancelled(j: ReportJob): boolean {
 }
 
 function netSale(j: ReportJob): number {
-  return Math.max(0, Number(j.sale_price ?? 0) - Number(j.discount ?? 0));
+  return Math.max(0, Number(j.sale_price ?? 0) - Number(j.discount ?? 0)) + Number(j.customer_shipping_fee ?? 0);
 }
 
 function totalCost(j: ReportJob): number {
@@ -182,7 +182,7 @@ export async function getReportData() {
     supabase
       .from("jobs")
       .select(
-        "id, job_code, job_label, status, sale_price, discount, cost, shipping_cost, other_cost, quantity, received_at, due_date, updated_at, customer_id, factory_id, customers(name), factories(name)",
+        "id, job_code, job_label, status, sale_price, discount, cost, shipping_cost, other_cost, customer_shipping_fee, quantity, received_at, due_date, updated_at, customer_id, factory_id, customers(name), factories(name)",
       )
       .or(`received_at.gte.${allTimeStart},updated_at.gte.${allTimeStart}`)
       .order("received_at", { ascending: false }),
