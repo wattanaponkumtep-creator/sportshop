@@ -163,6 +163,10 @@ export function NotifyCustomerDialog({
     } else {
       lines.push(`💰 ขอเก็บ: ${formatBaht(requestedAmount)}`);
     }
+    // ออเดอร์เล็ก โหมดตามจริง: บอกว่ายอดนี้ยังไม่รวมค่าส่ง
+    if (shipNoticeApplies && customerShippingFee <= 0) {
+      lines.push("📦 *ยอดนี้ยังไม่รวมค่าจัดส่ง — ทางร้านคิดตามจริงและแจ้งยอดภายหลังครับ");
+    }
     lines.push("");
     lines.push("💳 ช่องทางชำระ:");
     if (shopInfo?.bank_info?.trim()) {
@@ -173,7 +177,7 @@ export function NotifyCustomerDialog({
     lines.push("");
     lines.push("📩 หลังโอนกรุณาส่งสลิปกลับมาด้วยครับ");
     return lines.join("\n");
-  }, [includePayment, hasOutstanding, preset, paid, sale, requestedAmount, depositPct, shopInfo]);
+  }, [includePayment, hasOutstanding, preset, paid, sale, requestedAmount, depositPct, shopInfo, shipNoticeApplies, customerShippingFee]);
 
   const defaultMessage = paymentBlock ? `${statusBlock}\n\n${paymentBlock}` : statusBlock;
 
