@@ -74,10 +74,22 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     supabase.from("factory_checkins").select("*").eq("job_id", id).order("created_at", { ascending: false }),
     supabase.from("job_line_items").select("*").eq("job_id", id).order("position"),
     supabase.from("factory_messages").select("*").eq("job_id", id).order("created_at", { ascending: true }),
-    supabase.from("shop_info").select("shop_name, phone, bank_info").eq("id", 1).limit(1),
+    supabase.from("shop_info").select("shop_name, phone, bank_info, charge_customer_shipping, free_ship_min_qty, customer_ship_fee").eq("id", 1).limit(1),
   ]);
 
-  const shopInfo = (shopInfoRows && shopInfoRows[0]) as { shop_name: string | null; phone: string | null; bank_info: string | null } | undefined;
+  const shopInfo = (shopInfoRows && shopInfoRows[0]) as {
+    shop_name: string | null;
+    phone: string | null;
+    bank_info: string | null;
+    charge_customer_shipping?: boolean;
+    free_ship_min_qty?: number;
+    customer_ship_fee?: number;
+  } | undefined;
+  // ออเดอร์นี้เข้าเกณฑ์คิดค่าส่งไหม (สั่งน้อยกว่าเกณฑ์ + เปิดนโยบาย)
+  const shipNoticeApplies =
+    !!shopInfo?.charge_customer_shipping &&
+    Number(job.quantity) > 0 &&
+    Number(job.quantity) < Number(shopInfo.free_ship_min_qty ?? 50);
 
   const customer = job.customers as { id: string; name: string; phone: string | null } | null;
   const factory = job.factories as { id: string; name: string } | null;
@@ -127,6 +139,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               0,
             )}
             customerShippingFee={Number(job.customer_shipping_fee ?? 0)}
+            shipNoticeApplies={shipNoticeApplies}
             shopInfo={shopInfo ? { shop_name: shopInfo.shop_name, bank_info: shopInfo.bank_info } : null}
           />
           <CopyTrackLink trackToken={job.track_token} />
