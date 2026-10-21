@@ -25,22 +25,21 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // TEMP: inspect anon key for non-ASCII corruption
+  // TEMP: inspect keys for non-ASCII corruption
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+  const svc = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-  let badIdx = -1;
-  let badVal = -1;
-  for (let i = 0; i < anon.length; i++) {
-    if (anon.charCodeAt(i) > 255) { badIdx = i; badVal = anon.charCodeAt(i); break; }
-  }
+  const firstBad = (s: string) => {
+    for (let i = 0; i < s.length; i++) if (s.charCodeAt(i) > 255) return i;
+    return -1;
+  };
   return NextResponse.redirect(
     dbg({
       error: "nocode",
-      hv: String(hasVerifier),
+      anonBad: String(firstBad(anon)),
       anonLen: String(anon.length),
-      anonHead: anon.slice(0, 20),
-      badIdx: String(badIdx),
-      badVal: String(badVal),
+      svcBad: String(firstBad(svc)),
+      svcLen: String(svc.length),
       urlOk: String(/^https:\/\/[a-z0-9]+\.supabase\.co$/.test(url)),
     })
   );
