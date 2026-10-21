@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, X, Edit, Trash2, Save, Upload, Loader2, ImageIcon, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
-import { createClient } from "@/lib/supabase/client";
+import { uploadToR2 } from "@/lib/storage/upload-client";
 import { createCatalogItem, updateCatalogItem, deleteCatalogItem, toggleItemActive } from "@/app/(admin)/catalog/actions";
 import type { CatalogItem } from "@/lib/types/database";
 
@@ -212,7 +212,6 @@ function ItemEditForm({
   const [uploading, setUploading] = useState(false);
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const supabase = createClient();
 
   async function handleFile(file: File) {
     if (file.size > 10 * 1024 * 1024) {
@@ -222,15 +221,14 @@ function ItemEditForm({
     setUploading(true);
     const ext = file.name.split(".").pop() ?? "jpg";
     const path = `catalog/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { error } = await supabase.storage.from("job-files").upload(path, file, { cacheControl: "3600" });
-    if (error) {
-      toast({ title: "อัปโหลดไม่สำเร็จ", description: error.message, variant: "destructive" });
+    const up = await uploadToR2(path, file);
+    if (!up.ok) {
+      toast({ title: "อัปโหลดไม่สำเร็จ", description: up.error, variant: "destructive" });
       setUploading(false);
       return;
     }
-    const { data: signed } = await supabase.storage.from("job-files").createSignedUrl(path, 3600);
     setThumbnailPath(path);
-    setThumbnailUrl(signed?.signedUrl ?? null);
+    setThumbnailUrl(up.publicUrl);
     setUploading(false);
   }
 

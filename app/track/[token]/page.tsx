@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Shirt, Package, Truck, ImageIcon, Ruler, ExternalLink, Palette, Printer, Scissors, Factory, ClipboardCheck } from "lucide-react";
 import { createServiceClient } from "@/lib/supabase/server";
+import { r2PublicUrl } from "@/lib/storage/r2";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,15 +53,8 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
   if (error || !data) notFound();
   const job = data as unknown as TrackingPayload;
 
-  // Generate signed URLs for mockup images
-  const mockupSignedUrls: string[] = job.latest_mockup
-    ? await Promise.all(
-        (job.latest_mockup.storage_paths ?? []).map(async (path) => {
-          const { data: urlData } = await supabase.storage.from("job-files").createSignedUrl(path, 3600);
-          return urlData?.signedUrl ?? "";
-        })
-      )
-    : [];
+  // รูป mockup → URL สาธารณะ R2
+  const mockupSignedUrls: string[] = (job.latest_mockup?.storage_paths ?? []).map((path) => r2PublicUrl(path));
 
   const overallProgress = Math.round(
     (job.layout_progress + job.print_progress + job.sew_progress + job.ship_progress) / 4

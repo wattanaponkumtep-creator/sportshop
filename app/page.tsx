@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/server";
+import { r2PublicUrl } from "@/lib/storage/r2";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Sparkles, Clock, Shield, Award, Palette, Layers, MessageCircle, Star } from "lucide-react";
@@ -49,13 +50,10 @@ export default async function HomePage() {
     ? { minQty: Number(shop.free_ship_min_qty), fee: Number(shop.customer_ship_fee) }
     : null;
 
-  // Sign portfolio thumbnails (1 batch)
+  // URL สาธารณะ R2 (คงที่ cache ได้)
   const thumbs = featuredDesigns.map((d) => d.thumbnail_path).filter((p): p is string => !!p);
   const urlMap = new Map<string, string>();
-  if (thumbs.length > 0) {
-    const { data: signed } = await supabase.storage.from("job-files").createSignedUrls(thumbs, 3600);
-    for (const s of signed ?? []) if (s.path && s.signedUrl) urlMap.set(s.path, s.signedUrl);
-  }
+  for (const p of thumbs) urlMap.set(p, r2PublicUrl(p));
 
   return (
     <>

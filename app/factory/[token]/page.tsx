@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Factory, Package, Calendar, FileText, Hash } from "lucide-react";
 import { createServiceClient } from "@/lib/supabase/server";
+import { r2PublicUrl } from "@/lib/storage/r2";
 import { formatDateTH } from "@/lib/utils";
 import { JOB_STATUS_LABEL, JOB_STATUS_COLOR, PRIORITY_LABEL, PRIORITY_COLOR, FACTORY_STATUS_LABEL } from "@/lib/constants";
 import { FactoryPortalClient } from "./portal-client";
@@ -81,12 +82,7 @@ export default async function FactoryPortalPage({ params }: { params: Promise<{ 
   const allPaths = [...new Set([...filePaths, ...mockupPaths])];
 
   const urlMap = new Map<string, string>();
-  if (allPaths.length > 0) {
-    const { data: signed } = await supabase.storage.from("job-files").createSignedUrls(allPaths, 3600);
-    for (const s of signed ?? []) {
-      if (s.path && s.signedUrl) urlMap.set(s.path, s.signedUrl);
-    }
-  }
+  for (const p of allPaths) urlMap.set(p, r2PublicUrl(p));
 
   const signedFiles: SignedFile[] = (portal.files ?? [])
     .map((f) => ({ ...f, url: urlMap.get(f.storage_path) ?? null }))

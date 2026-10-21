@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, Download, Trash2, File as FileIcon, Image as ImageIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { uploadToR2 } from "@/lib/storage/upload-client";
 import { FILE_KIND_LABEL } from "@/lib/constants";
 import { formatDateTH } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
@@ -38,10 +39,8 @@ export function JobFiles({ jobId, files }: { jobId: string; files: JobFile[] }) 
       }
       const ext = file.name.split(".").pop() ?? "bin";
       const path = `${jobId}/${kind}/${Date.now()}_${i}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("job-files").upload(path, file, {
-        cacheControl: "3600", upsert: false, contentType: file.type,
-      });
-      if (upErr) { toast({ title: `อัปโหลด ${file.name} ไม่สำเร็จ`, description: upErr.message, variant: "destructive" }); continue; }
+      const up = await uploadToR2(path, file);
+      if (!up.ok) { toast({ title: `อัปโหลด ${file.name} ไม่สำเร็จ`, description: up.error, variant: "destructive" }); continue; }
 
       const { error: insErr } = await supabase.from("job_files").insert({
         job_id: jobId, kind, storage_path: path, file_name: file.name,
@@ -59,8 +58,7 @@ export function JobFiles({ jobId, files }: { jobId: string; files: JobFile[] }) 
 
   async function handleDownload(path: string) {
     const result = await createSignedFileUrl(path);
-    if (result.ok) window.open(result.url, "_blank");
-    else toast({ title: "ไม่สามารถสร้างลิงก์", description: result.error, variant: "destructive" });
+    window.open(result.url, "_blank");
   }
 
   function handleDelete(fileId: string) {

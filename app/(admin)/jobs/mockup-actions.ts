@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { r2PublicUrl, r2Delete } from "@/lib/storage/r2";
 
 const createMockupSchema = z.object({
   title: z.string().trim().optional().nullable(),
@@ -154,7 +155,7 @@ export async function deleteMockup(mockupId: string, jobId: string) {
   const m = mockup as { storage_paths: string[]; version: number } | null;
 
   if (m?.storage_paths && m.storage_paths.length > 0) {
-    await supabase.storage.from("job-files").remove(m.storage_paths);
+    await r2Delete(m.storage_paths);
   }
 
   const { error } = await supabase.from("mockups").delete().eq("id", mockupId);
@@ -173,12 +174,5 @@ export async function deleteMockup(mockupId: string, jobId: string) {
 }
 
 export async function createMockupFileUrls(paths: string[]) {
-  const supabase = await createClient();
-  const results = await Promise.all(
-    paths.map(async (path) => {
-      const { data } = await supabase.storage.from("job-files").createSignedUrl(path, 3600);
-      return { path, url: data?.signedUrl ?? null };
-    })
-  );
-  return results;
+  return paths.map((path) => ({ path, url: r2PublicUrl(path) }));
 }

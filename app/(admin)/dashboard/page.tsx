@@ -10,6 +10,7 @@ import { DailySchedule } from "@/components/admin/daily-schedule";
 import { FollowupSuggestions } from "@/components/admin/followup-suggestions";
 import { BankBalanceCard } from "@/components/admin/bank-balance-card";
 import { getCashPosition } from "@/lib/reports/cash-position";
+import { r2PublicUrl } from "@/lib/storage/r2";
 
 export const dynamic = "force-dynamic";
 
@@ -41,13 +42,9 @@ export default async function DashboardPage() {
       latestMockupByJob.set(m.job_id, m.storage_paths[0]);
     }
   }
-  const pathsToSign = Array.from(latestMockupByJob.values());
   const signedUrlMap = new Map<string, string>();
-  if (pathsToSign.length > 0) {
-    const { data: signedData } = await supabase.storage.from("job-files").createSignedUrls(pathsToSign, 3600);
-    for (const s of signedData ?? []) {
-      if (s.path && s.signedUrl) signedUrlMap.set(s.path, s.signedUrl);
-    }
+  for (const path of latestMockupByJob.values()) {
+    signedUrlMap.set(path, r2PublicUrl(path));
   }
   const jobsWithThumb = (jobs ?? []).map((j) => {
     const path = latestMockupByJob.get(j.id as string);

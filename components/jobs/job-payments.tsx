@@ -14,7 +14,7 @@ import { PAYMENT_TYPE_LABEL } from "@/lib/constants";
 import { formatBaht, formatDateTH, cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { addPayment, deletePayment, createSignedSlipUrl } from "@/app/(admin)/jobs/payment-actions";
-import { createClient } from "@/lib/supabase/client";
+import { uploadToR2 } from "@/lib/storage/upload-client";
 import { PaymentRequestDialog } from "./payment-request-dialog";
 import { DiscountEditor } from "./discount-editor";
 import type { Payment, PaymentType } from "@/lib/types/database";
@@ -86,8 +86,7 @@ export function JobPayments({
 
   async function handleViewSlip(slipPath: string) {
     const result = await createSignedSlipUrl(slipPath);
-    if (result.ok) window.open(result.url, "_blank");
-    else toast({ title: "ไม่สามารถเปิดสลิป", description: result.error, variant: "destructive" });
+    window.open(result.url, "_blank");
   }
 
   function handleDelete(id: string) {
@@ -427,15 +426,12 @@ function AddPaymentDialog({
         return;
       }
       setUploading(true);
-      const supabase = createClient();
       const ext = slipFile.name.split(".").pop() ?? "jpg";
       slipPath = `${jobId}/slips/${Date.now()}.${ext}`;
-      const { error } = await supabase.storage
-        .from("job-files")
-        .upload(slipPath, slipFile, { cacheControl: "3600", upsert: false, contentType: slipFile.type });
+      const up = await uploadToR2(slipPath, slipFile);
       setUploading(false);
-      if (error) {
-        toast({ title: "อัปโหลดสลิปไม่สำเร็จ", description: error.message, variant: "destructive" });
+      if (!up.ok) {
+        toast({ title: "อัปโหลดสลิปไม่สำเร็จ", description: up.error, variant: "destructive" });
         return;
       }
     }

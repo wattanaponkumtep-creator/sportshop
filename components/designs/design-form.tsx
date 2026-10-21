@@ -12,7 +12,7 @@ import { Upload, X, Star, Image as ImageIcon, Loader2, Save } from "lucide-react
 import { SPORT_TYPES, DESIGN_COLOR_OPTIONS, DESIGN_COLOR_HEX, DESIGN_COLOR_LABEL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
-import { createClient } from "@/lib/supabase/client";
+import { uploadToR2 } from "@/lib/storage/upload-client";
 import { createDesign, updateDesign } from "@/app/(admin)/designs/actions";
 import type { Design } from "@/lib/types/database";
 
@@ -31,7 +31,6 @@ export function DesignForm({ existing, initialImages = [] }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const supabase = createClient();
 
   // Form state
   const [name, setName] = useState(existing?.name ?? "");
@@ -85,23 +84,20 @@ export function DesignForm({ existing, initialImages = [] }: Props) {
         const ext = file.name.split(".").pop() ?? "jpg";
         const path = `designs/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
-        const { error } = await supabase.storage
-          .from("job-files")
-          .upload(path, file, { cacheControl: "3600", upsert: false });
+        const up = await uploadToR2(path, file);
 
-        if (error) {
-          toast({ title: `อัปโหลด ${file.name} ไม่สำเร็จ`, description: error.message, variant: "destructive" });
+        if (!up.ok) {
+          toast({ title: `อัปโหลด ${file.name} ไม่สำเร็จ`, description: up.error, variant: "destructive" });
           URL.revokeObjectURL(placeholder.url);
           setImages((prev) => prev.filter((img) => img.path !== placeholder.path));
           return;
         }
 
-        const { data: signed } = await supabase.storage.from("job-files").createSignedUrl(path, 3600);
         URL.revokeObjectURL(placeholder.url); // free blob memory
         setImages((prev) =>
           prev.map((img) =>
             img.path === placeholder.path
-              ? { path, url: signed?.signedUrl ?? img.url, uploading: false }
+              ? { path, url: up.publicUrl, uploading: false }
               : img,
           ),
         );

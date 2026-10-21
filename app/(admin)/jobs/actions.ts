@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import type { FactoryJobStatus, JobStatus } from "@/lib/types/database";
 import { sendStatusNotificationToCustomer } from "@/lib/jobs/notifications";
+import { r2PublicUrl, r2Delete } from "@/lib/storage/r2";
 
 const JOB_STATUS_VALUES = [
   "received", "designing", "awaiting_approval", "sent_to_factory",
@@ -393,7 +394,7 @@ export async function deleteJob(jobId: string) {
 
   // 2. Delete files from storage (best-effort; ignore errors)
   if (pathsToDelete.length > 0) {
-    await supabase.storage.from("job-files").remove(pathsToDelete);
+    await r2Delete(pathsToDelete);
   }
 
   // 3. Delete the job (cascade will handle job_items, job_files, job_timeline,
@@ -411,7 +412,7 @@ export async function deleteJobFile(fileId: string, jobId: string) {
   const supabase = await createClient();
   const { data: file } = await supabase.from("job_files").select("storage_path").eq("id", fileId).maybeSingle();
   if (file?.storage_path) {
-    await supabase.storage.from("job-files").remove([file.storage_path]);
+    await r2Delete([file.storage_path]);
   }
   const { error } = await supabase.from("job_files").delete().eq("id", fileId);
   if (error) return { ok: false as const, error: error.message };
@@ -420,8 +421,5 @@ export async function deleteJobFile(fileId: string, jobId: string) {
 }
 
 export async function createSignedFileUrl(storagePath: string) {
-  const supabase = await createClient();
-  const { data, error } = await supabase.storage.from("job-files").createSignedUrl(storagePath, 3600);
-  if (error || !data) return { ok: false as const, error: error?.message ?? "ไม่สามารถสร้างลิงก์" };
-  return { ok: true as const, url: data.signedUrl };
+  return { ok: true as const, url: r2PublicUrl(storagePath) };
 }

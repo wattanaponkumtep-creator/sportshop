@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/server";
+import { r2PublicUrl } from "@/lib/storage/r2";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Sparkles } from "lucide-react";
@@ -36,12 +37,7 @@ export default async function ShowcasePage() {
     .filter((p): p is string => !!p);
   const uniqueThumbs = [...new Set(allThumbs)];
   const urlMap = new Map<string, string>();
-  if (uniqueThumbs.length > 0) {
-    const { data: signed } = await supabase.storage.from("job-files").createSignedUrls(uniqueThumbs, 3600);
-    for (const s of signed ?? []) {
-      if (s.path && s.signedUrl) urlMap.set(s.path, s.signedUrl);
-    }
-  }
+  for (const p of uniqueThumbs) urlMap.set(p, r2PublicUrl(p));
 
   return (
     <>

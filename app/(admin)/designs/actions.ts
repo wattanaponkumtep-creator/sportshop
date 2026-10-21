@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { r2PublicUrl, r2Delete } from "@/lib/storage/r2";
 
 const designSchema = z.object({
   name: z.string().trim().min(1, "กรุณาใส่ชื่อดีไซน์"),
@@ -116,7 +117,7 @@ export async function deleteDesign(id: string) {
   if (d?.image_paths) d.image_paths.forEach((p) => toRemove.add(p));
 
   if (toRemove.size > 0) {
-    await supabase.storage.from("job-files").remove(Array.from(toRemove));
+    await r2Delete(Array.from(toRemove));
   }
 
   const { error } = await supabase.from("designs").delete().eq("id", id);
@@ -131,12 +132,5 @@ export async function deleteDesign(id: string) {
  * Returns paths in the same order as input; entries whose URL failed are dropped.
  */
 export async function createDesignFileUrls(paths: string[]) {
-  if (paths.length === 0) return [];
-  const supabase = await createClient();
-  const { data } = await supabase.storage.from("job-files").createSignedUrls(paths, 3600);
-  const map = new Map<string, string>();
-  for (const s of data ?? []) {
-    if (s.path && s.signedUrl) map.set(s.path, s.signedUrl);
-  }
-  return paths.map((path) => ({ path, url: map.get(path) ?? null }));
+  return paths.map((path) => ({ path, url: r2PublicUrl(path) }));
 }

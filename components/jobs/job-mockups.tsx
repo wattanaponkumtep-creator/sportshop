@@ -11,7 +11,7 @@ import { Palette, Plus, Trash2, Send, Copy, Check, Upload, X, ImageIcon } from "
 import { MOCKUP_STATUS_COLOR, MOCKUP_STATUS_LABEL } from "@/lib/constants";
 import { formatDateTH, cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
-import { createClient } from "@/lib/supabase/client";
+import { uploadToR2 } from "@/lib/storage/upload-client";
 import { createMockup, sendMockupForApproval, deleteMockup, createMockupFileUrls } from "@/app/(admin)/jobs/mockup-actions";
 import { MockupApprovalDialog } from "@/components/jobs/mockup-approval-dialog";
 import type { Mockup } from "@/lib/types/database";
@@ -227,18 +227,15 @@ function CreateMockupDialog({ jobId, open, onClose }: { jobId: string; open: boo
     }
 
     setUploading(true);
-    const supabase = createClient();
     const paths: string[] = [];
 
     for (let i = 0; i < files.length; i++) {
       const f = files[i];
       const ext = f.name.split(".").pop() ?? "png";
       const path = `${jobId}/mockups/${Date.now()}_${i}.${ext}`;
-      const { error } = await supabase.storage
-        .from("job-files")
-        .upload(path, f, { cacheControl: "3600", upsert: false, contentType: f.type });
-      if (error) {
-        toast({ title: `อัปโหลด ${f.name} ไม่สำเร็จ`, description: error.message, variant: "destructive" });
+      const up = await uploadToR2(path, f);
+      if (!up.ok) {
+        toast({ title: `อัปโหลด ${f.name} ไม่สำเร็จ`, description: up.error, variant: "destructive" });
         setUploading(false);
         return;
       }

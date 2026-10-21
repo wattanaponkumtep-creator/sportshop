@@ -8,6 +8,7 @@ import type { MockupStatus } from "@/lib/types/database";
 import { formatDateTH } from "@/lib/utils";
 import { ApprovalForm } from "@/components/approval/approval-form";
 import { MockupGallery } from "@/components/approval/mockup-gallery";
+import { r2PublicUrl } from "@/lib/storage/r2";
 
 export const dynamic = "force-dynamic";
 
@@ -35,12 +36,7 @@ export default async function ApprovalPage({ params }: { params: Promise<{ token
   if (error || !rpcData) notFound();
   const mockup = rpcData as unknown as MockupPayload;
 
-  const signedUrls: string[] = await Promise.all(
-    (mockup.storage_paths ?? []).map(async (path) => {
-      const { data } = await supabase.storage.from("job-files").createSignedUrl(path, 3600);
-      return data?.signedUrl ?? "";
-    })
-  );
+  const signedUrls: string[] = (mockup.storage_paths ?? []).map((path) => r2PublicUrl(path));
 
   const isAwaiting = mockup.status === "awaiting_approval";
 

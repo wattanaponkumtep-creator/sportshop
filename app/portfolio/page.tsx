@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/server";
+import { r2PublicUrl } from "@/lib/storage/r2";
 import { ArrowRight, Palette, Sparkles } from "lucide-react";
 import { PublicHeader, PublicFooter } from "@/components/public/public-layout";
 import { PortfolioGallery, type GalleryDesign } from "@/components/public/portfolio-gallery";
@@ -36,13 +37,7 @@ export default async function PortfolioPage() {
   const allPaths = [...new Set(ordered.flatMap((o) => o.paths))];
 
   const urlMap = new Map<string, string>();
-  if (allPaths.length > 0) {
-    // Batch signed URLs in one round-trip
-    const { data: signed } = await supabase.storage.from("job-files").createSignedUrls(allPaths, 3600);
-    for (const s of signed ?? []) {
-      if (s.path && s.signedUrl) urlMap.set(s.path, s.signedUrl);
-    }
-  }
+  for (const p of allPaths) urlMap.set(p, r2PublicUrl(p));
 
   const galleryDesigns: GalleryDesign[] = ordered.map((o) => ({
     id: o.design.id,

@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { r2PublicUrl, r2Delete } from "@/lib/storage/r2";
 
 const paymentTypeValues = ["deposit", "full", "refund"] as const;
 
@@ -61,7 +62,7 @@ export async function deletePayment(paymentId: string, jobId: string) {
     .maybeSingle();
 
   if (payment?.slip_path) {
-    await supabase.storage.from("job-files").remove([payment.slip_path]);
+    await r2Delete([payment.slip_path]);
   }
 
   const { error } = await supabase.from("payments").delete().eq("id", paymentId);
@@ -103,8 +104,5 @@ export async function updateJobDiscount(jobId: string, discount: number, note?: 
 }
 
 export async function createSignedSlipUrl(slipPath: string) {
-  const supabase = await createClient();
-  const { data, error } = await supabase.storage.from("job-files").createSignedUrl(slipPath, 3600);
-  if (error || !data) return { ok: false as const, error: error?.message ?? "ไม่สามารถสร้างลิงก์" };
-  return { ok: true as const, url: data.signedUrl };
+  return { ok: true as const, url: r2PublicUrl(slipPath) };
 }
