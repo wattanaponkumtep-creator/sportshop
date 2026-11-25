@@ -20,6 +20,7 @@ import { CopyTrackLink } from "@/components/jobs/copy-track-link";
 import { ManualNotifyButton } from "@/components/jobs/manual-notify-button";
 import { DeleteJobButton } from "@/components/jobs/delete-job-button";
 import { WorkflowStepper } from "@/components/jobs/workflow-stepper";
+import { LeadTimeCard } from "@/components/jobs/lead-time-card";
 import { SizeSummary } from "@/components/jobs/size-summary";
 import { RosterUpload } from "@/components/jobs/roster-upload";
 import { ItemTypeSummary } from "@/components/jobs/item-type-summary";
@@ -156,6 +157,15 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
       </header>
 
       <WorkflowStepper currentStatus={job.status} timeline={timeline ?? []} />
+
+      <LeadTimeCard
+        quantity={Math.max(
+          Number(job.quantity) || 0,
+          (items ?? []).reduce((s, it) => s + (Number((it as { quantity?: number }).quantity) || 1), 0),
+        )}
+        receivedAt={job.received_at}
+        dueDate={job.due_date}
+      />
 
       <ProductionStages
         jobId={job.id}
