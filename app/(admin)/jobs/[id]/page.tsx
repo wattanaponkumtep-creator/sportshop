@@ -21,6 +21,7 @@ import { ManualNotifyButton } from "@/components/jobs/manual-notify-button";
 import { DeleteJobButton } from "@/components/jobs/delete-job-button";
 import { WorkflowStepper } from "@/components/jobs/workflow-stepper";
 import { LeadTimeCard } from "@/components/jobs/lead-time-card";
+import { OrderConfirmAdmin } from "@/components/jobs/order-confirm-admin";
 import { SizeSummary } from "@/components/jobs/size-summary";
 import { RosterUpload } from "@/components/jobs/roster-upload";
 import { ItemTypeSummary } from "@/components/jobs/item-type-summary";
@@ -165,6 +166,12 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         )}
         receivedAt={job.received_at}
         dueDate={job.due_date}
+      />
+
+      <OrderConfirmAdmin
+        token={(job as { order_confirm_token: string }).order_confirm_token}
+        confirmedAt={(job as { order_confirmed_at?: string | null }).order_confirmed_at}
+        confirmedBy={(job as { order_confirmed_by?: string | null }).order_confirmed_by}
       />
 
       <ProductionStages

@@ -231,6 +231,9 @@ export interface Job {
   sample_status: string;
   sample_approved_at: string | null;
   sample_note: string | null;
+  order_confirm_token: string;
+  order_confirmed_at: string | null;
+  order_confirmed_by: string | null;
 }
 
 export interface JobItem {
