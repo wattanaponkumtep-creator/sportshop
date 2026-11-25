@@ -24,7 +24,29 @@
       "Bash(git rev-list *)",
       "mcp__visualize__read_me",
       "mcp__visualize__show_widget",
-      "mcp__4c7643e8-93e4-4af6-a926-25e414fc01dd__list_projects"
+      "mcp__4c7643e8-93e4-4af6-a926-25e414fc01dd__list_projects",
+      "mcp__4c7643e8-93e4-4af6-a926-25e414fc01dd__list_organizations",
+      "mcp__4c7643e8-93e4-4af6-a926-25e414fc01dd__get_project",
+      "mcp__4c7643e8-93e4-4af6-a926-25e414fc01dd__execute_sql",
+      "mcp__526917f3-91c3-48ec-af5c-c62da2a078bc__list_projects",
+      "mcp__526917f3-91c3-48ec-af5c-c62da2a078bc__filter_project_envs",
+      "mcp__4c7643e8-93e4-4af6-a926-25e414fc01dd__list_migrations",
+      "Bash(mkdir -p \"/c/Users/ASUS/AppData/Local/Temp/claude/D--new-app/47b99ad7-787a-4ef3-9e86-bb28182fcc23/scratchpad/migrate\")",
+      "Bash(cp \"/c/Users/ASUS/Downloads/Supabase Snippet Untitled query.csv\" \"/c/Users/ASUS/AppData/Local/Temp/claude/D--new-app/47b99ad7-787a-4ef3-9e86-bb28182fcc23/scratchpad/migrate/dump.csv\")",
+      "Read(//c/Users/ASUS/AppData/Local/Temp/claude/D--new-app/47b99ad7-787a-4ef3-9e86-bb28182fcc23/scratchpad/**)",
+      "Bash(node parse_dump.js \"./migrate/dump.csv\" \"./migrate/dump.json\")",
+      "Bash(node diff_schema.js \"./migrate/dump.json\")",
+      "mcp__4c7643e8-93e4-4af6-a926-25e414fc01dd__apply_migration",
+      "Bash(node -e ' *)",
+      "mcp__526917f3-91c3-48ec-af5c-c62da2a078bc__create_project_env",
+      "mcp__4c7643e8-93e4-4af6-a926-25e414fc01dd__query_logs",
+      "Bash(node -e \"console.log\\('ssr', require\\('@supabase/ssr/package.json'\\).version\\); console.log\\('supabase-js', require\\('@supabase/supabase-js/package.json'\\).version\\)\")",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "mcp__526917f3-91c3-48ec-af5c-c62da2a078bc__list_deployments",
+      "Bash(git commit -q -m 'debug: inspect anon key for non-ascii corruption \\(temp\\) *)",
+      "Bash(git commit -q -m 'debug: also inspect service role key \\(temp\\) *)",
+      "Bash(git commit -q -m 'revert: remove temporary auth callback debug *)"
     ]
   }
 }

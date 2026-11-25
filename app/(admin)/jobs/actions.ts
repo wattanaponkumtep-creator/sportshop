@@ -123,6 +123,18 @@ export async function createJob(input: NewJobInput) {
 
 export async function updateJobStatus(jobId: string, status: JobStatus) {
   const supabase = await createClient();
+
+  // ล็อก: ห้ามเลื่อนเป็น "ผลิต" (เต็มล็อต) ถ้า "ตัวอย่าง" ยังไม่อนุมัติ
+  if (status === "producing") {
+    const { data: j } = await supabase.from("jobs").select("sample_status").eq("id", jobId).single();
+    if (j && j.sample_status !== "approved") {
+      return {
+        ok: false as const,
+        error: "ต้องอนุมัติ 'ตัวอย่าง' ก่อนถึงจะผลิตเต็มล็อตได้ — ไปที่การ์ด 'ขั้นตอนตัวอย่าง' ในแท็บโรงงาน",
+      };
+    }
+  }
+
   const { error } = await supabase.from("jobs").update({ status }).eq("id", jobId);
   if (error) return { ok: false as const, error: error.message };
 

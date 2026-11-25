@@ -30,6 +30,7 @@ import { ProductionStages } from "@/components/jobs/production-stages";
 import { FactoryCheckins } from "@/components/jobs/factory-checkins";
 import { LineItemsEditor } from "@/components/jobs/line-items-editor";
 import { FactoryCommunication } from "@/components/jobs/factory-communication";
+import { SampleGate } from "@/components/jobs/sample-gate";
 import { r2PublicUrl } from "@/lib/storage/r2";
 import type { FactoryJob, FactoryMessage, JobItem } from "@/lib/types/database";
 import { FileText } from "lucide-react";
@@ -239,6 +240,12 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         </TabsContent>
 
         <TabsContent value="factory" className="mt-4 space-y-4">
+          <SampleGate
+            jobId={job.id}
+            sampleStatus={(job as { sample_status?: string }).sample_status ?? "pending"}
+            sampleApprovedAt={(job as { sample_approved_at?: string | null }).sample_approved_at}
+            sampleNote={(job as { sample_note?: string | null }).sample_note}
+          />
           {(() => {
             const factoryJobsTyped = (factoryJobs ?? []) as FactoryJob[];
             const messagesTyped = (factoryMessages ?? []) as FactoryMessage[];

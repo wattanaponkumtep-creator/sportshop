@@ -228,6 +228,9 @@ export interface Job {
   production_options: string[];
   factory_cost_paid_at: string | null;
   customer_shipping_fee: number;
+  sample_status: string;
+  sample_approved_at: string | null;
+  sample_note: string | null;
 }
 
 export interface JobItem {
