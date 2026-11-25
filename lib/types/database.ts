@@ -234,6 +234,8 @@ export interface Job {
   order_confirm_token: string;
   order_confirmed_at: string | null;
   order_confirmed_by: string | null;
+  roster_token: string;
+  roster_submitted_at: string | null;
 }
 
 export interface JobItem {

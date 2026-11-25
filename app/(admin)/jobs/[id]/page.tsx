@@ -22,6 +22,7 @@ import { DeleteJobButton } from "@/components/jobs/delete-job-button";
 import { WorkflowStepper } from "@/components/jobs/workflow-stepper";
 import { LeadTimeCard } from "@/components/jobs/lead-time-card";
 import { OrderConfirmAdmin } from "@/components/jobs/order-confirm-admin";
+import { RosterLinkAdmin } from "@/components/jobs/roster-link-admin";
 import { SizeSummary } from "@/components/jobs/size-summary";
 import { RosterUpload } from "@/components/jobs/roster-upload";
 import { ItemTypeSummary } from "@/components/jobs/item-type-summary";
@@ -203,6 +204,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         </TabsContent>
 
         <TabsContent value="items" className="mt-4 space-y-4">
+          <RosterLinkAdmin
+            token={(job as { roster_token: string }).roster_token}
+            submittedAt={(job as { roster_submitted_at?: string | null }).roster_submitted_at}
+            itemCount={(items ?? []).length}
+          />
           <ItemTypeSummary items={items ?? []} />
           <ReceivingCheck
             jobId={job.id}
