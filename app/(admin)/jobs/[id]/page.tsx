@@ -30,6 +30,7 @@ import { ProductionStages } from "@/components/jobs/production-stages";
 import { FactoryCheckins } from "@/components/jobs/factory-checkins";
 import { LineItemsEditor } from "@/components/jobs/line-items-editor";
 import { FactoryCommunication } from "@/components/jobs/factory-communication";
+import { r2PublicUrl } from "@/lib/storage/r2";
 import type { FactoryJob, FactoryMessage, JobItem } from "@/lib/types/database";
 import { FileText } from "lucide-react";
 
@@ -242,6 +243,12 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             const factoryJobsTyped = (factoryJobs ?? []) as FactoryJob[];
             const messagesTyped = (factoryMessages ?? []) as FactoryMessage[];
             const factoriesById = new Map((factories ?? []).map((f) => [f.id, f.name]));
+            // รูป mockup (อนุมัติแล้วก่อน ไม่งั้นล่าสุด) สำหรับแนบในใบสั่งงานโรงงาน
+            const mk = (mockups ?? []) as { status?: string; storage_paths?: string[] | null }[];
+            const chosenMk = mk.find((m) => m.status === "approved") ?? mk[0];
+            const mockupImageUrl = chosenMk?.storage_paths?.[0]
+              ? r2PublicUrl(chosenMk.storage_paths[0])
+              : null;
             return factoryJobsTyped
               .filter((fj) => fj.portal_token)
               .map((fj) => (
@@ -264,6 +271,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
                   portalToken={fj.portal_token as string}
                   messages={messagesTyped.filter((m) => m.factory_job_id === fj.id)}
                   items={(items ?? []) as JobItem[]}
+                  mockupImageUrl={mockupImageUrl}
                 />
               ));
           })()}

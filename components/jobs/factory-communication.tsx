@@ -30,6 +30,7 @@ type Props = {
   portalToken: string;
   messages: FactoryMessage[];
   items?: JobItem[];
+  mockupImageUrl?: string | null;
 };
 
 export function FactoryCommunication({
@@ -50,6 +51,7 @@ export function FactoryCommunication({
   portalToken,
   messages,
   items = [],
+  mockupImageUrl,
 }: Props) {
   const [copied, setCopied] = useState(false);
   const [copiedBrief, setCopiedBrief] = useState(false);
@@ -75,6 +77,12 @@ export function FactoryCommunication({
     return Array.from(m.entries());
   })();
 
+  // ตัวอย่างก่อนผลิต: ถ้ามีกางเกง → 1 ชุด, ไม่งั้น 1 ตัว
+  const hasShorts =
+    items.some((it) => (it.item_type ?? "").includes("กางเกง")) ||
+    (productType ?? "").includes("กางเกง");
+  const sampleUnit = hasShorts ? "1 ชุด (เสื้อ + กางเกง)" : "1 ตัว";
+
   // ---------- สร้างข้อความใบสั่งงานครบ ----------
   function buildBriefMessage(): string {
     const lines: (string | null)[] = [
@@ -91,6 +99,20 @@ export function FactoryCommunication({
 
     lines.push(`📋 งาน: ${jobCode}`);
     lines.push(jobLabel ? `📦 ${jobLabel}` : productType ? `📦 ${productType}` : null);
+    lines.push("");
+
+    // รูปแบบเสื้อ — ให้โรงงานเห็นรูปจำงานได้ทันที (รูปนำ)
+    if (mockupImageUrl) {
+      lines.push("🖼️ แบบเสื้อ (ผลิตตามรูปนี้เป๊ะ):");
+      lines.push(mockupImageUrl);
+      lines.push("");
+    }
+
+    // ★ ทำตัวอย่างก่อนผลิตเต็มล็อต — ทุกงาน
+    lines.push("🔴 สำคัญ — ก่อนเดินเครื่องเต็มล็อต:");
+    lines.push(`   ขอผลิต “ตัวอย่าง” ${sampleUnit} ก่อน`);
+    lines.push("   → ส่งรูป/ตัวอย่างให้ทางร้านยืนยันก่อน แล้วค่อยผลิตทั้งหมด");
+    lines.push("   (กันพิมพ์ผิดยกล็อต — ทุกงานต้องมีตัวอย่างก่อน 🙏)");
     lines.push("");
 
     if (dueDate) {
@@ -237,6 +259,20 @@ export function FactoryCommunication({
             <FileText className="h-4 w-4" /> ส่งใบสั่งงานให้โรงงาน
           </div>
 
+          {/* รูปแบบเสื้อ — โชว์ให้เห็นก่อนส่ง (รูปนำ) */}
+          {mockupImageUrl && (
+            <div className="mb-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={mockupImageUrl}
+                alt={`แบบเสื้อ ${jobCode}`}
+                className="max-h-44 rounded-md border border-border object-contain"
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                👆 รูปนี้จะถูกแนบไปในข้อความ (โรงงานเห็นรูปจำงานได้)
+              </p>
+            </div>
+          )}
           {/* Preview ข้อความ */}
           <pre className="mb-2 max-h-48 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-card/60 p-2.5 font-sans text-[11px] leading-relaxed text-foreground/90">
             {buildBriefMessage()}
