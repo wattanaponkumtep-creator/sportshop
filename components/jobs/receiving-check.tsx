@@ -132,6 +132,9 @@ export function ReceivingCheck({ jobId, items, receivedCounts, receivedCheckAt, 
       <CardContent className="space-y-4">
         <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-xs text-muted-foreground">
           💡 <strong>วิธีใช้:</strong> เมื่อโรงงานส่งเสื้อมา — นับจริงแล้วใส่ตัวเลขในตารางด้านล่าง ระบบจะเช็คให้ว่าครบ/ขาด/เกิน
+          <div className="mt-1.5 border-t border-emerald-500/20 pt-1.5">
+            🔎 <strong>อย่าลืม:</strong> สุ่มเปิดดู <strong>ชื่อ–เบอร์ 5–10 ตัว</strong> เทียบกับรายชื่อที่ลูกค้ายืนยัน (กันพิมพ์ชื่อ/เบอร์ผิด ที่การนับจำนวนจับไม่ได้)
+          </div>
         </div>
 
         {/* ตารางตรวจรับ */}

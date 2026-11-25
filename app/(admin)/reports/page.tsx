@@ -78,6 +78,12 @@ export default async function ReportsPage() {
           >
             <Wallet className="h-4 w-4" /> รายงานการเงิน (เงินเข้า-ออก)
           </Link>
+          <Link
+            href="/reports/factory-scorecard"
+            className="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-violet-500 to-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 transition hover:shadow-violet-500/40"
+          >
+            <Factory className="h-4 w-4" /> คะแนนโรงงาน (Scorecard)
+          </Link>
         </div>
       </header>
 
