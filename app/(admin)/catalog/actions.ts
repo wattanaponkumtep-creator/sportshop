@@ -39,6 +39,7 @@ export async function createCatalogItem(input: CatalogItemInput) {
   if (error || !data) return { ok: false as const, error: error?.message ?? "บันทึกไม่สำเร็จ" };
 
   revalidatePath("/catalog");
+  revalidatePath("/showcase");
   return { ok: true as const, id: data.id as string };
 }
 
@@ -63,6 +64,7 @@ export async function updateCatalogItem(id: string, input: CatalogItemInput) {
   if (error) return { ok: false as const, error: error.message };
 
   revalidatePath("/catalog");
+  revalidatePath("/showcase");
   return { ok: true as const };
 }
 

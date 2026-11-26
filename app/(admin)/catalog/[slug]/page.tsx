@@ -33,11 +33,15 @@ export default async function CatalogCategoryAdminPage({
 
   const itemList = (items ?? []) as CatalogItem[];
 
-  // Pre-sign thumbnail URLs server-side
-  const thumbnailPaths = itemList
-    .map((i) => i.thumbnail_path)
-    .filter((p): p is string => !!p);
-  const signedUrls = await createCatalogFileUrls(thumbnailPaths);
+  // เตรียม URL ของ "ทุกรูป" ทุกรายการ (รูปปก + รูปในคลัง) ไม่ใช่แค่รูปปก
+  const allPaths = [
+    ...new Set(
+      itemList
+        .flatMap((i) => [i.thumbnail_path, ...((i.image_paths as string[] | null) ?? [])])
+        .filter((p): p is string => !!p),
+    ),
+  ];
+  const signedUrls = await createCatalogFileUrls(allPaths);
   const urlMap = new Map(signedUrls.filter((s) => s.url).map((s) => [s.path, s.url as string]));
 
   return (

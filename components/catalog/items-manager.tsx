@@ -7,19 +7,33 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, Edit, Trash2, Save, Upload, Loader2, ImageIcon, Eye, EyeOff } from "lucide-react";
+import { Plus, X, Edit, Trash2, Save, Upload, Loader2, ImageIcon, Eye, EyeOff, Star, Images } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { uploadToR2 } from "@/lib/storage/upload-client";
 import { createCatalogItem, updateCatalogItem, deleteCatalogItem, toggleItemActive } from "@/app/(admin)/catalog/actions";
 import type { CatalogItem } from "@/lib/types/database";
 
+// สเปคที่ใช้บ่อย — กดเพิ่มเร็ว ไม่ต้องพิมพ์ชื่อคอลัมน์เอง
+const SPEC_PRESETS = [
+  "น้ำหนักผ้า",
+  "ความหนา",
+  "ระบายอากาศ",
+  "แห้งไว",
+  "ความยืดหยุ่น",
+  "ผิวสัมผัส",
+  "เหมาะกับ",
+  "สีที่มี",
+  "ราคาเพิ่ม/ตัว",
+];
+
+type ItemImage = { path: string; url: string | null };
+
 type ItemEditor = {
   id?: string;
   name: string;
   description: string;
-  thumbnail_path: string | null;
-  thumbnail_preview_url: string | null;
+  images: ItemImage[];
   is_active: boolean;
   attributes: { key: string; value: string }[];
 };
@@ -27,8 +41,7 @@ type ItemEditor = {
 const EMPTY_ITEM: ItemEditor = {
   name: "",
   description: "",
-  thumbnail_path: null,
-  thumbnail_preview_url: null,
+  images: [],
   is_active: true,
   attributes: [],
 };
@@ -47,15 +60,20 @@ export function CatalogItemsManager({
   const [isPending, startTransition] = useTransition();
 
   function startNew() {
-    setEditing({ ...EMPTY_ITEM, attributes: [] });
+    setEditing({ ...EMPTY_ITEM, images: [], attributes: [] });
   }
   function startEdit(item: CatalogItem) {
+    // รวมรูปปก + รูปในคลัง (กันซ้ำ, ให้รูปปกอยู่หน้าสุด)
+    const paths = [
+      ...(item.thumbnail_path ? [item.thumbnail_path] : []),
+      ...((item.image_paths as string[] | null) ?? []),
+    ];
+    const uniquePaths = [...new Set(paths)];
     setEditing({
       id: item.id,
       name: item.name,
       description: item.description ?? "",
-      thumbnail_path: item.thumbnail_path,
-      thumbnail_preview_url: item.thumbnail_path ? thumbnailUrls[item.thumbnail_path] ?? null : null,
+      images: uniquePaths.map((p) => ({ path: p, url: thumbnailUrls[p] ?? null })),
       is_active: item.is_active,
       attributes: Object.entries(item.attributes ?? {}).map(([key, value]) => ({
         key,
@@ -116,11 +134,13 @@ export function CatalogItemsManager({
         </Card>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((item) => (
+          {items.map((item) => {
+            const imageCount = ((item.image_paths as string[] | null) ?? []).length;
+            return (
             <Card key={item.id} className={cn(!item.is_active && "opacity-50")}>
               <CardContent className="p-3">
                 {/* Thumbnail */}
-                <div className="mb-2 aspect-square overflow-hidden rounded-md bg-muted">
+                <div className="relative mb-2 aspect-square overflow-hidden rounded-md bg-muted">
                   {item.thumbnail_path && thumbnailUrls[item.thumbnail_path] ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -133,6 +153,11 @@ export function CatalogItemsManager({
                     <div className="flex h-full items-center justify-center text-muted-foreground">
                       <ImageIcon className="h-8 w-8" />
                     </div>
+                  )}
+                  {imageCount > 1 && (
+                    <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                      <Images className="h-3 w-3" /> {imageCount}
+                    </span>
                   )}
                 </div>
 
@@ -185,7 +210,8 @@ export function CatalogItemsManager({
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -205,35 +231,50 @@ function ItemEditForm({
 }) {
   const [name, setName] = useState(editing.name);
   const [description, setDescription] = useState(editing.description);
-  const [thumbnailPath, setThumbnailPath] = useState<string | null>(editing.thumbnail_path);
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(editing.thumbnail_preview_url);
+  const [images, setImages] = useState<ItemImage[]>(editing.images);
   const [isActive, setIsActive] = useState(editing.is_active);
   const [attrs, setAttrs] = useState(editing.attributes);
   const [uploading, setUploading] = useState(false);
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  async function handleFile(file: File) {
-    if (file.size > 10 * 1024 * 1024) {
-      toast({ title: "ไฟล์ใหญ่เกิน 10MB", variant: "destructive" });
-      return;
-    }
+  async function handleFiles(files: FileList) {
     setUploading(true);
-    const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `catalog/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const up = await uploadToR2(path, file);
-    if (!up.ok) {
-      toast({ title: "อัปโหลดไม่สำเร็จ", description: up.error, variant: "destructive" });
-      setUploading(false);
-      return;
+    const added: ItemImage[] = [];
+    for (const file of Array.from(files)) {
+      if (file.size > 10 * 1024 * 1024) {
+        toast({ title: `"${file.name}" ใหญ่เกิน 10MB — ข้าม`, variant: "destructive" });
+        continue;
+      }
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `catalog/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const up = await uploadToR2(path, file);
+      if (!up.ok) {
+        toast({ title: `อัปโหลด "${file.name}" ไม่สำเร็จ`, description: up.error, variant: "destructive" });
+        continue;
+      }
+      added.push({ path, url: up.publicUrl });
     }
-    setThumbnailPath(path);
-    setThumbnailUrl(up.publicUrl);
+    if (added.length) setImages((prev) => [...prev, ...added]);
     setUploading(false);
   }
 
-  function addAttr() {
-    setAttrs((a) => [...a, { key: "", value: "" }]);
+  function removeImage(path: string) {
+    setImages((prev) => prev.filter((img) => img.path !== path));
+  }
+  function makeCover(path: string) {
+    setImages((prev) => {
+      const target = prev.find((img) => img.path === path);
+      if (!target) return prev;
+      return [target, ...prev.filter((img) => img.path !== path)];
+    });
+  }
+
+  function addAttr(key = "") {
+    setAttrs((a) => [...a, { key, value: "" }]);
+  }
+  function addPreset(key: string) {
+    setAttrs((a) => (a.some((row) => row.key.trim() === key) ? a : [...a, { key, value: "" }]));
   }
   function removeAttr(i: number) {
     setAttrs((a) => a.filter((_, idx) => idx !== i));
@@ -253,12 +294,13 @@ function ItemEditForm({
       if (k) attrObj[k] = value.trim();
     }
 
+    const imagePaths = images.map((img) => img.path);
     const payload = {
       category_id: categoryId,
       name: name.trim(),
       description: description.trim() || null,
-      thumbnail_path: thumbnailPath,
-      image_paths: thumbnailPath ? [thumbnailPath] : [],
+      thumbnail_path: imagePaths[0] ?? null, // รูปแรก = รูปปก
+      image_paths: imagePaths,
       attributes: attrObj,
       is_active: isActive,
       position: 0,
@@ -279,78 +321,135 @@ function ItemEditForm({
 
   return (
     <Card className="border-primary/40">
-      <CardContent className="space-y-3 p-4">
+      <CardContent className="space-y-4 p-4">
         <div className="text-sm font-semibold">
           {editing.id ? "✏️ แก้ไขรายการ" : "➕ เพิ่มรายการใหม่"}
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-[180px_1fr]">
-          {/* Thumbnail upload */}
-          <div className="space-y-1.5">
-            <Label className="text-xs">รูปหลัก</Label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
-            />
+        {/* รูปภาพ — หลายรูปได้ */}
+        <div className="space-y-1.5">
+          <Label className="text-xs">รูปภาพ (ใส่ได้หลายรูป · รูปแรก = รูปปก)</Label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => e.target.files?.length && handleFiles(e.target.files)}
+          />
+          <div className="flex flex-wrap gap-2">
+            {images.map((img, idx) => (
+              <div
+                key={img.path}
+                className={cn(
+                  "group relative h-24 w-24 overflow-hidden rounded-md border-2 bg-muted",
+                  idx === 0 ? "border-primary" : "border-border",
+                )}
+              >
+                {img.url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={img.url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full items-center justify-center">
+                    <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                )}
+                {idx === 0 ? (
+                  <span className="absolute left-1 top-1 inline-flex items-center gap-0.5 rounded bg-primary px-1 py-0.5 text-[9px] font-medium text-primary-foreground">
+                    <Star className="h-2.5 w-2.5" /> ปก
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => makeCover(img.path)}
+                    className="absolute left-1 top-1 rounded bg-black/60 px-1 py-0.5 text-[9px] text-white opacity-0 transition group-hover:opacity-100"
+                    title="ตั้งเป็นรูปปก"
+                  >
+                    ตั้งเป็นปก
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => removeImage(img.path)}
+                  className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white opacity-0 transition group-hover:opacity-100"
+                  title="ลบรูปนี้"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+            {/* ปุ่มเพิ่มรูป */}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="block aspect-square w-full overflow-hidden rounded-md border-2 border-dashed border-border bg-muted/30 transition hover:border-primary/50"
+              className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded-md border-2 border-dashed border-border bg-muted/30 text-muted-foreground transition hover:border-primary/50"
             >
               {uploading ? (
-                <div className="flex h-full items-center justify-center">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : thumbnailUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-1 text-muted-foreground">
-                  <Upload className="h-6 w-6" />
-                  <span className="text-[10px]">คลิกเลือกรูป</span>
-                </div>
+                <>
+                  <Upload className="h-5 w-5" />
+                  <span className="text-[10px]">เพิ่มรูป</span>
+                </>
               )}
             </button>
           </div>
+        </div>
 
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="name" className="text-xs">ชื่อ *</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="เช่น Polyester Microfiber"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="desc" className="text-xs">รายละเอียด</Label>
-              <Textarea
-                id="desc"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={2}
-                placeholder="เช่น เนื้อผ้าระบายอากาศได้ดี เหมาะกับกีฬากลางแจ้ง..."
-              />
-            </div>
+        {/* ชื่อ + รายละเอียด */}
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="name" className="text-xs">ชื่อ *</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="เช่น ผ้าไมโคร (Polyester Microfiber)"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="desc" className="text-xs">รายละเอียด</Label>
+            <Textarea
+              id="desc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              placeholder="เช่น เนื้อผ้านุ่ม ระบายอากาศดี แห้งไว เหมาะกับกีฬากลางแจ้ง..."
+            />
           </div>
         </div>
 
         {/* Attributes */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label className="text-xs">คุณสมบัติ / Specs (Optional)</Label>
-            <Button type="button" size="sm" variant="ghost" onClick={addAttr}>
-              <Plus className="h-3 w-3" /> เพิ่ม
-            </Button>
+        <div className="space-y-2">
+          <Label className="text-xs">คุณสมบัติ / สเปค</Label>
+          {/* ชิปกดเพิ่มเร็ว */}
+          <div className="flex flex-wrap gap-1.5">
+            {SPEC_PRESETS.map((k) => {
+              const used = attrs.some((row) => row.key.trim() === k);
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => addPreset(k)}
+                  disabled={used}
+                  className={cn(
+                    "rounded-full border px-2.5 py-1 text-[11px] transition",
+                    used
+                      ? "border-primary/40 bg-primary/10 text-primary/60"
+                      : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground",
+                  )}
+                >
+                  {used ? "✓ " : "+ "}
+                  {k}
+                </button>
+              );
+            })}
           </div>
+
           {attrs.length === 0 ? (
             <p className="text-[11px] text-muted-foreground">
-              💡 เช่น น้ำหนัก: 180g, แห้งเร็ว: ใช่, ราคา: +10฿
+              💡 กดชิปด้านบนเพื่อเพิ่มสเปคเร็วๆ แล้วใส่แค่ค่า (หรือกด &quot;เพิ่มเอง&quot; ด้านล่าง)
             </p>
           ) : (
             <div className="space-y-1.5">
@@ -359,8 +458,8 @@ function ItemEditForm({
                   <Input
                     value={a.key}
                     onChange={(e) => updateAttr(i, "key", e.target.value)}
-                    placeholder="ชื่อ (เช่น น้ำหนัก)"
-                    className="flex-1 text-xs"
+                    placeholder="ชื่อสเปค (เช่น น้ำหนักผ้า)"
+                    className="w-40 text-xs"
                   />
                   <Input
                     value={a.value}
@@ -375,6 +474,9 @@ function ItemEditForm({
               ))}
             </div>
           )}
+          <Button type="button" size="sm" variant="ghost" onClick={() => addAttr()}>
+            <Plus className="h-3 w-3" /> เพิ่มเอง
+          </Button>
         </div>
 
         <label className="flex items-center gap-2 text-xs">
@@ -384,7 +486,7 @@ function ItemEditForm({
             onChange={(e) => setIsActive(e.target.checked)}
             className="h-4 w-4 accent-primary"
           />
-          แสดงในหน้าสาธารณะ (is_active)
+          แสดงในหน้าสาธารณะ (ให้ลูกค้าเห็น)
         </label>
 
         <div className="flex justify-end gap-2 border-t border-border pt-3">
