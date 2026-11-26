@@ -55,6 +55,7 @@ export function FactoryCommunication({
 }: Props) {
   const [copied, setCopied] = useState(false);
   const [copiedBrief, setCopiedBrief] = useState(false);
+  const [copiedAsk, setCopiedAsk] = useState(false);
   const [reply, setReply] = useState("");
   const [isPending, startTransition] = useTransition();
 
@@ -158,6 +159,37 @@ export function FactoryCommunication({
     lines.push("👆 คลิกลิงก์เพื่อดูรายละเอียดครบ + อัพเดทสถานะ + แจ้งปัญหากลับมาได้เลยครับ");
 
     return lines.filter((l) => l !== null).join("\n");
+  }
+
+  // ---------- ข้อความถามสถานะงาน ----------
+  function buildStatusAskMessage(): string {
+    const lines: (string | null)[] = [
+      `📋 สอบถามสถานะงาน — ${shopName ?? "SportShop"}`,
+      "━━━━━━━━━━━━━━━━━━",
+      `งาน: ${jobCode}${jobLabel ? ` (${jobLabel})` : ""}`,
+      dueDate ? `📅 ลูกค้าต้องการใช้: ${formatThaiFullDate(dueDate)}` : null,
+      "",
+      "ตอนนี้ผลิตถึงขั้นไหนแล้วครับ? 🙏",
+      "รบกวนกดลิงก์นี้ แล้วแตะ % อัพเดทให้หน่อยครับ (หรือพิมพ์บอกกลับมาก็ได้):",
+      portalUrl,
+    ];
+    return lines.filter((l) => l !== null).join("\n");
+  }
+
+  function shareStatusAskLINE() {
+    const url = `https://line.me/R/share?text=${encodeURIComponent(buildStatusAskMessage())}`;
+    window.open(url, "_blank");
+  }
+
+  async function copyAsk() {
+    try {
+      await navigator.clipboard.writeText(buildStatusAskMessage());
+      setCopiedAsk(true);
+      toast({ title: "Copy ข้อความถามสถานะแล้ว — paste ใน LINE ได้เลย ✅" });
+      setTimeout(() => setCopiedAsk(false), 2000);
+    } catch {
+      toast({ title: "Copy ไม่สำเร็จ", variant: "destructive" });
+    }
   }
 
   async function copyLink() {
@@ -294,6 +326,25 @@ export function FactoryCommunication({
               {!deliveryAddress?.trim() ? " ที่อยู่จัดส่ง" : ""} ใน tab &quot;รายละเอียด&quot; เพื่อให้ข้อความครบขึ้น
             </p>
           )}
+        </div>
+
+        {/* ถามสถานะงาน — กดทีเดียวส่ง LINE */}
+        <div className="rounded-lg border-2 border-cyan-500/40 bg-cyan-500/5 p-3">
+          <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-cyan-300">
+            <MessageSquare className="h-4 w-4" /> ถามสถานะงาน
+          </div>
+          <p className="mb-2 text-[11px] text-muted-foreground">
+            กดทวงสถานะทีเดียว → เด้ง LINE พร้อมข้อความ + ลิงก์ให้โรงงานกดอัพเดท % กลับมา
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={shareStatusAskLINE} className="flex-1 bg-[#06C755] text-white hover:bg-[#05a647]">
+              <MessageCircle className="h-3.5 w-3.5" /> ถามสถานะทาง LINE
+            </Button>
+            <Button size="sm" onClick={copyAsk} variant="outline" className="flex-1">
+              {copiedAsk ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+              {copiedAsk ? "Copy แล้ว!" : "Copy ข้อความ"}
+            </Button>
+          </div>
         </div>
 
         {/* Portal link (compact) */}
