@@ -158,6 +158,15 @@ export async function updateJobStatus(jobId: string, status: JobStatus) {
   return { ok: true as const };
 }
 
+export async function saveSheetUrl(jobId: string, url: string) {
+  const supabase = await createClient();
+  const clean = url.trim();
+  const { error } = await supabase.from("jobs").update({ sheet_url: clean || null }).eq("id", jobId);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath(`/jobs/${jobId}`);
+  return { ok: true as const };
+}
+
 const editJobSchema = z.object({
   product_type: z.string().trim().nullable().optional(),
   job_label: z.string().trim().nullable().optional(),

@@ -236,6 +236,7 @@ export interface Job {
   order_confirmed_by: string | null;
   roster_token: string;
   roster_submitted_at: string | null;
+  sheet_url: string | null;
 }
 
 export interface Claim {
