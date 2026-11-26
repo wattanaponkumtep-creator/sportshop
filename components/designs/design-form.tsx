@@ -8,8 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, X, Star, Image as ImageIcon, Loader2, Save } from "lucide-react";
+import { Upload, X, Star, Image as ImageIcon, Loader2, Save, ChevronDown } from "lucide-react";
 import { SPORT_TYPES, DESIGN_COLOR_OPTIONS, DESIGN_COLOR_HEX, DESIGN_COLOR_LABEL } from "@/lib/constants";
+
+// แท็กที่ใช้บ่อย — กดเพิ่มเร็ว ไม่ต้องพิมพ์
+const DESIGN_TAG_PRESETS = [
+  "คอกลม", "คอปก", "คอวี", "แขนสั้น", "แขนยาว",
+  "ซับลิเมชั่น", "ปักโลโก้", "ชุดทีม", "เสื้อ+กางเกง", "มินิมอล",
+];
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
 import { uploadToR2 } from "@/lib/storage/upload-client";
@@ -45,6 +51,9 @@ export function DesignForm({ existing, initialImages = [] }: Props) {
 
   // Images (in order — first one is thumbnail). Server provides pre-signed URLs.
   const [images, setImages] = useState<UploadedImage[]>(initialImages);
+
+  // ยุบรายละเอียดที่ไม่บังคับ — ตอนเพิ่มใหม่ยุบไว้ให้กรอกเร็ว, ตอนแก้ไขเปิดไว้
+  const [showMore, setShowMore] = useState(!!existing);
 
   // Revoke blob: URLs on unmount to free memory
   useEffect(() => {
@@ -135,6 +144,10 @@ export function DesignForm({ existing, initialImages = [] }: Props) {
     }
     setTags((prev) => [...prev, t]);
     setTagInput("");
+  }
+
+  function addTagPreset(t: string) {
+    setTags((prev) => (prev.includes(t) ? prev : [...prev, t]));
   }
 
   function removeTag(tag: string) {
@@ -291,12 +304,9 @@ export function DesignForm({ existing, initialImages = [] }: Props) {
         </CardContent>
       </Card>
 
-      {/* Basic Info */}
+      {/* ส่วนหลัก: ชื่อ + กีฬา (กรอกเร็ว) */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">ข้อมูลพื้นฐาน</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-3 p-4">
           <div className="space-y-1.5">
             <Label htmlFor="name">ชื่อดีไซน์ *</Label>
             <Input
@@ -307,9 +317,8 @@ export function DesignForm({ existing, initialImages = [] }: Props) {
               required
             />
           </div>
-
           <div className="space-y-1.5">
-            <Label htmlFor="sport">ประเภทกีฬา</Label>
+            <Label htmlFor="sport">ประเภทกีฬา (ไม่บังคับ)</Label>
             <Select value={sportType} onValueChange={setSportType}>
               <SelectTrigger id="sport">
                 <SelectValue placeholder="-- เลือกประเภทกีฬา --" />
@@ -321,156 +330,165 @@ export function DesignForm({ existing, initialImages = [] }: Props) {
               </SelectContent>
             </Select>
           </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="desc">คำอธิบาย</Label>
-            <Textarea
-              id="desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-              placeholder="เช่น คอกลม พิมพ์ซับลิเมชั่น เนื้อผ้า Polyester 100%"
-            />
-          </div>
+          <p className="text-[11px] text-muted-foreground">
+            ✨ แค่ใส่ <b>รูป + ชื่อ</b> ก็บันทึกได้เลย — ส่วนอื่นไม่บังคับ
+          </p>
         </CardContent>
       </Card>
 
-      {/* Colors */}
+      {/* รายละเอียดเพิ่มเติม — ยุบไว้ให้กรอกเร็ว */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">สี ({colors.length} สีที่เลือก)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {DESIGN_COLOR_OPTIONS.map((c) => {
-              const active = colors.includes(c.value);
-              return (
-                <button
-                  key={c.value}
-                  type="button"
-                  onClick={() => toggleColor(c.value)}
-                  className={cn(
-                    "inline-flex items-center gap-2 rounded-full border-2 px-3 py-1 text-xs transition",
-                    active
-                      ? "border-primary bg-primary/15 font-semibold text-foreground"
-                      : "border-border text-muted-foreground hover:border-primary/40"
-                  )}
-                >
-                  <span
-                    className="inline-block h-3 w-3 rounded-full border border-border"
-                    style={{ backgroundColor: c.hex }}
-                  />
-                  {c.label}
-                </button>
-              );
-            })}
-          </div>
-          {colors.length > 0 && (
-            <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-border pt-3">
-              <span className="text-xs text-muted-foreground">สีที่เลือก:</span>
-              {colors.map((c) => (
-                <Badge key={c} variant="outline" className="gap-1.5 text-xs">
-                  <span
-                    className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: DESIGN_COLOR_HEX[c] }}
-                  />
-                  {DESIGN_COLOR_LABEL[c] ?? c}
-                </Badge>
-              ))}
+        <button
+          type="button"
+          onClick={() => setShowMore((v) => !v)}
+          className="flex w-full items-center justify-between gap-2 p-4 text-left"
+        >
+          <span className="text-sm font-semibold">
+            รายละเอียดเพิ่มเติม <span className="font-normal text-muted-foreground">(ไม่บังคับ)</span>
+          </span>
+          <span className="flex items-center gap-2 text-xs text-muted-foreground">
+            {(() => {
+              const parts: string[] = [];
+              if (colors.length) parts.push(`${colors.length} สี`);
+              if (tags.length) parts.push(`${tags.length} แท็ก`);
+              if (suggestedPrice) parts.push("ราคา ✓");
+              return parts.length ? parts.join(" · ") : "แตะเพื่อเปิด";
+            })()}
+            <ChevronDown className={cn("h-4 w-4 transition", showMore && "rotate-180")} />
+          </span>
+        </button>
+
+        {showMore && (
+          <CardContent className="space-y-5 border-t border-border pt-4">
+            {/* คำอธิบาย */}
+            <div className="space-y-1.5">
+              <Label htmlFor="desc" className="text-xs">คำอธิบาย</Label>
+              <Textarea
+                id="desc"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={2}
+                placeholder="เช่น คอกลม พิมพ์ซับลิเมชั่น เนื้อผ้า Polyester 100%"
+              />
             </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Tags */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">แท็ก (สำหรับค้นหา)</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex gap-2">
-            <Input
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addTag();
-                }
-              }}
-              placeholder="เช่น คอกลม, ซับลิเมชั่น, แขนยาว..."
-            />
-            <Button type="button" variant="outline" onClick={addTag}>เพิ่ม</Button>
-          </div>
-          {tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {tags.map((t) => (
-                <Badge key={t} variant="secondary" className="gap-1 text-xs">
-                  {t}
-                  <button type="button" onClick={() => removeTag(t)} className="hover:text-destructive">
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ))}
+            {/* สี */}
+            <div className="space-y-2">
+              <Label className="text-xs">สี ({colors.length})</Label>
+              <div className="flex flex-wrap gap-2">
+                {DESIGN_COLOR_OPTIONS.map((c) => {
+                  const active = colors.includes(c.value);
+                  return (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => toggleColor(c.value)}
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-full border-2 px-3 py-1 text-xs transition",
+                        active
+                          ? "border-primary bg-primary/15 font-semibold text-foreground"
+                          : "border-border text-muted-foreground hover:border-primary/40",
+                      )}
+                    >
+                      <span
+                        className="inline-block h-3 w-3 rounded-full border border-border"
+                        style={{ backgroundColor: c.hex }}
+                      />
+                      {c.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Price */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">ราคาแนะนำ (ไม่บังคับ)</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="price">ราคาขาย (฿/ตัว)</Label>
-            <Input
-              id="price"
-              type="number"
-              min="0"
-              step="0.01"
-              value={suggestedPrice}
-              onChange={(e) => setSuggestedPrice(e.target.value)}
-              placeholder="0"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="cost">ต้นทุน (฿/ตัว)</Label>
-            <Input
-              id="cost"
-              type="number"
-              min="0"
-              step="0.01"
-              value={suggestedCost}
-              onChange={(e) => setSuggestedCost(e.target.value)}
-              placeholder="0"
-            />
-          </div>
-          {suggestedPrice && suggestedCost && (
-            <div className="col-span-2 text-xs text-emerald-400">
-              💰 กำไรต่อตัว: ฿{(Number(suggestedPrice) - Number(suggestedCost)).toLocaleString()}
-              {Number(suggestedPrice) > 0 && (
-                <> ({(((Number(suggestedPrice) - Number(suggestedCost)) / Number(suggestedPrice)) * 100).toFixed(0)}%)</>
+            {/* แท็ก — ชิปกดเร็ว + พิมพ์เอง */}
+            <div className="space-y-2">
+              <Label className="text-xs">แท็ก (สำหรับค้นหา)</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {DESIGN_TAG_PRESETS.map((t) => {
+                  const used = tags.includes(t);
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => addTagPreset(t)}
+                      disabled={used}
+                      className={cn(
+                        "rounded-full border px-2.5 py-1 text-[11px] transition",
+                        used
+                          ? "border-primary/40 bg-primary/10 text-primary/60"
+                          : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground",
+                      )}
+                    >
+                      {used ? "✓ " : "+ "}
+                      {t}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addTag();
+                    }
+                  }}
+                  placeholder="เพิ่มแท็กเอง เช่น ลายทีมชาติ..."
+                />
+                <Button type="button" variant="outline" onClick={addTag}>เพิ่ม</Button>
+              </div>
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {tags.map((t) => (
+                    <Badge key={t} variant="secondary" className="gap-1 text-xs">
+                      {t}
+                      <button type="button" onClick={() => removeTag(t)} className="hover:text-destructive">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
               )}
             </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Internal Note */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">โน้ตภายใน (ไม่แสดงให้ลูกค้า)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            rows={2}
-            placeholder="เช่น โรงงาน A ทำราคาดีสุด, ลูกค้าทีม True ชอบแบบนี้"
-          />
-        </CardContent>
+            {/* ราคา */}
+            <div className="space-y-2">
+              <Label className="text-xs">ราคาแนะนำ</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="price" className="text-[11px] text-muted-foreground">ราคาขาย (฿/ตัว)</Label>
+                  <Input id="price" type="number" min="0" step="0.01" value={suggestedPrice} onChange={(e) => setSuggestedPrice(e.target.value)} placeholder="0" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cost" className="text-[11px] text-muted-foreground">ต้นทุน (฿/ตัว)</Label>
+                  <Input id="cost" type="number" min="0" step="0.01" value={suggestedCost} onChange={(e) => setSuggestedCost(e.target.value)} placeholder="0" />
+                </div>
+                {suggestedPrice && suggestedCost && (
+                  <div className="col-span-2 text-xs text-emerald-400">
+                    💰 กำไรต่อตัว: ฿{(Number(suggestedPrice) - Number(suggestedCost)).toLocaleString()}
+                    {Number(suggestedPrice) > 0 && (
+                      <> ({(((Number(suggestedPrice) - Number(suggestedCost)) / Number(suggestedPrice)) * 100).toFixed(0)}%)</>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* โน้ตภายใน */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">โน้ตภายใน (ไม่แสดงให้ลูกค้า)</Label>
+              <Textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={2}
+                placeholder="เช่น โรงงาน A ทำราคาดีสุด, ลูกค้าทีม True ชอบแบบนี้"
+              />
+            </div>
+          </CardContent>
+        )}
       </Card>
 
       {/* Submit */}
