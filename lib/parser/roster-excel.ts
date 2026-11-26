@@ -57,18 +57,11 @@ export type ParseResult = {
   error: string;
 };
 
-export function parseRosterFile(arrayBuffer: ArrayBuffer): ParseResult {
+// ประมวลผล data (array ของ array) → ParseResult (ใช้ร่วมทั้งไฟล์และวางข้อความ)
+function parseRosterRows(data: unknown[][]): ParseResult {
   try {
-    const workbook = XLSX.read(arrayBuffer, { type: "array" });
-    const firstSheet = workbook.SheetNames[0];
-    if (!firstSheet) return { ok: false, error: "ไม่พบ sheet ในไฟล์" };
-
-    const sheet = workbook.Sheets[firstSheet];
-    // Convert to array of arrays
-    const data: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-
     if (data.length < 2) {
-      return { ok: false, error: "ไฟล์ว่างเปล่า หรือไม่มี header" };
+      return { ok: false, error: "ข้อมูลว่างเปล่า หรือไม่มี header" };
     }
 
     // Try detecting header row (could be row 0, 1, or 2 — sometimes title is row 0)
@@ -134,6 +127,29 @@ export function parseRosterFile(arrayBuffer: ArrayBuffer): ParseResult {
       totalRows: rows.length,
     };
   } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "อ่านข้อมูลไม่สำเร็จ" };
+  }
+}
+
+export function parseRosterFile(arrayBuffer: ArrayBuffer): ParseResult {
+  try {
+    const workbook = XLSX.read(arrayBuffer, { type: "array" });
+    const firstSheet = workbook.SheetNames[0];
+    if (!firstSheet) return { ok: false, error: "ไม่พบ sheet ในไฟล์" };
+    const sheet = workbook.Sheets[firstSheet];
+    const data: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+    return parseRosterRows(data);
+  } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "อ่านไฟล์ไม่สำเร็จ" };
   }
+}
+
+// วางจาก Google Sheet / Excel (copy เซลล์ → clipboard เป็น TSV) หรือ CSV
+export function parseRosterText(text: string): ParseResult {
+  const raw = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+  if (!raw) return { ok: false, error: "ยังไม่ได้วางข้อมูล" };
+  const lines = raw.split("\n").filter((l) => l.trim().length > 0);
+  const delim = lines.some((l) => l.includes("\t")) ? "\t" : ",";
+  const data: string[][] = lines.map((l) => l.split(delim).map((c) => c.trim()));
+  return parseRosterRows(data);
 }

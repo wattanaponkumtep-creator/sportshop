@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Upload, FileSpreadsheet, CheckCircle2, X, ArrowRight, Sparkles, FileText, Loader2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/components/ui/use-toast";
-import { parseRosterFile, type ParseResult, type ParsedRow } from "@/lib/parser/roster-excel";
+import { parseRosterFile, parseRosterText, type ParseResult, type ParsedRow } from "@/lib/parser/roster-excel";
 import { saveJobItems } from "@/app/(admin)/jobs/actions";
 import { ITEM_TYPE_PRESETS, SIZE_ORDER, normalizeSize } from "@/lib/constants";
 
@@ -44,7 +44,19 @@ export function RosterUpload({ jobId, onImported }: { jobId: string; onImported?
   const [fileName, setFileName] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [pasteText, setPasteText] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  function handlePaste() {
+    const result = parseRosterText(pasteText);
+    setFileName("วางจาก Google Sheet");
+    setParsed(result);
+    if (!result.ok) {
+      toast({ title: "อ่านข้อมูลไม่สำเร็จ", description: result.error, variant: "destructive" });
+    } else {
+      toast({ title: `อ่านได้ ${result.totalRows} แถว`, description: "ตรวจสอบก่อนนำเข้า" });
+    }
+  }
 
   async function handleFile(file: File) {
     setFileName(file.name);
@@ -99,6 +111,7 @@ export function RosterUpload({ jobId, onImported }: { jobId: string; onImported?
   function reset() {
     setParsed(null);
     setFileName(null);
+    setPasteText("");
     if (inputRef.current) inputRef.current.value = "";
   }
 
@@ -225,6 +238,26 @@ export function RosterUpload({ jobId, onImported }: { jobId: string; onImported?
                 <p>💡 ระบบจะข้ามแถวว่างเปล่าให้อัตโนมัติ</p>
               </div>
             </details>
+
+            {/* วางจาก Google Sheet / Excel */}
+            <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3">
+              <div className="mb-1 inline-flex items-center gap-1.5 text-sm font-medium text-emerald-300">
+                <FileSpreadsheet className="h-4 w-4" /> หรือ วางจาก Google Sheet / Excel
+              </div>
+              <p className="mb-2 text-xs text-muted-foreground">
+                เปิดชีต → เลือกเซลล์ (รวมหัวตาราง ชื่อ/เบอร์/ไซส์) → Ctrl+C → วางด้านล่าง (ไม่ต้องดาวน์โหลดไฟล์)
+              </p>
+              <textarea
+                value={pasteText}
+                onChange={(e) => setPasteText(e.target.value)}
+                rows={4}
+                placeholder={"ชื่อ\tเบอร์\tไซส์\nสมชาย\t9\tL\nมานี\t7\tM"}
+                className="w-full rounded-md border border-border bg-background p-2 font-mono text-xs outline-none focus:border-primary"
+              />
+              <Button size="sm" className="mt-2" onClick={handlePaste} disabled={!pasteText.trim()}>
+                <ArrowRight className="h-3.5 w-3.5" /> อ่านข้อมูลที่วาง
+              </Button>
+            </div>
           </>
         ) : !parsed.ok ? (
           <div className="space-y-2">
