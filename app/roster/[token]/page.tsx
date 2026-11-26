@@ -52,7 +52,7 @@ export default async function RosterPage({ params }: { params: Promise<{ token: 
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl sport-accent-gradient">
             <Shirt className="h-6 w-6 text-white" />
           </div>
-          <h1 className="text-xl font-bold">กรอกรายชื่อทีม</h1>
+          <h1 className="text-xl font-bold">รายชื่อทีม</h1>
           <p className="text-sm text-muted-foreground">
             {job.job_label || job.product_type || job.job_code}
             {customer?.name ? ` · ${customer.name}` : ""}
@@ -74,7 +74,7 @@ export default async function RosterPage({ params }: { params: Promise<{ token: 
         ) : (
           <>
             <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 p-3 text-xs text-sky-100">
-              กรอก <b>ชื่อบนเสื้อ · เบอร์ · ไซซ์</b> ของแต่ละคนให้ครบ → กดส่ง (กรอกเองเพื่อความถูกต้อง 100%)
+              ตรวจ/กรอก <b>ชื่อบนเสื้อ · เบอร์ · ไซซ์</b> ของแต่ละคนให้ครบถูกต้อง (กรอกเองเพื่อความถูกต้อง 100%)
             </div>
             <SizeChart />
             <RosterEntryForm token={token} initialRows={initialRows} />

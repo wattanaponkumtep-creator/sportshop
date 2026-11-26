@@ -1,7 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Plus, Trash2, Users } from "lucide-react";
+import { Loader2, Plus, Trash2, Users, Pencil, CheckCircle2 } from "lucide-react";
 import { submitRoster } from "@/app/roster/actions";
 
 const SIZES = ["SS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL", "6XL"];
@@ -17,6 +17,7 @@ export function RosterEntryForm({ token, initialRows }: { token: string; initial
   );
   const [err, setErr] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [mode, setMode] = useState<"view" | "edit">(initialRows.length > 0 ? "view" : "edit");
 
   const numberCounts = new Map<string, number>();
   for (const r of rows) {
@@ -40,9 +41,68 @@ export function RosterEntryForm({ token, initialRows }: { token: string; initial
     }
     startTransition(async () => {
       const res = await submitRoster({ token, rows: filled });
-      if (res.ok) router.refresh();
-      else setErr(res.error);
+      if (res.ok) {
+        setMode("view");
+        router.refresh();
+      } else setErr(res.error);
     });
+  }
+
+  if (mode === "view") {
+    const filled = rows.filter((r) => r.name || r.number || r.size);
+    const sizeTally = new Map<string, number>();
+    for (const r of filled) {
+      const s = r.size.trim() || "ไม่ระบุ";
+      sizeTally.set(s, (sizeTally.get(s) ?? 0) + 1);
+    }
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="inline-flex items-center gap-2 text-sm font-semibold">
+            <CheckCircle2 className="h-4 w-4 text-emerald-400" /> รายชื่อของคุณ ({filled.length} คน)
+          </div>
+          <button
+            onClick={() => setMode("edit")}
+            className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-xs hover:border-primary hover:text-primary"
+          >
+            <Pencil className="h-3.5 w-3.5" /> แก้ไข
+          </button>
+        </div>
+
+        <div className="overflow-hidden rounded-lg border border-border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/60 text-xs text-muted-foreground">
+              <tr>
+                <th className="p-2 text-left">#</th>
+                <th className="p-2 text-left">ชื่อ</th>
+                <th className="p-2 text-center">เบอร์</th>
+                <th className="p-2 text-center">ไซซ์</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filled.map((r, i) => (
+                <tr key={i} className="border-t border-border/50">
+                  <td className="p-2 text-xs text-muted-foreground">{i + 1}</td>
+                  <td className="p-2">{r.name || "-"}</td>
+                  <td className="p-2 text-center font-mono">{r.number || "-"}</td>
+                  <td className="p-2 text-center font-semibold">{r.size || "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="rounded-md border border-border bg-card/40 p-2.5 text-xs">
+          <b>สรุปไซซ์:</b>{" "}
+          {Array.from(sizeTally.entries()).map(([s, n]) => `${s}×${n}`).join("  ")} ·{" "}
+          <b>รวม {filled.length} ตัว</b>
+        </div>
+
+        <p className="text-center text-xs text-muted-foreground">
+          ✅ ตรวจสอบว่าถูกต้องไหม — ถ้ามีผิดกด <b>แก้ไข</b> ด้านบน
+        </p>
+      </div>
+    );
   }
 
   return (
