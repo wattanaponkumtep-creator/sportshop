@@ -15,6 +15,7 @@ type Props = {
   sampleApproved: boolean;
   receivedCheck: boolean;
   fullyPaid: boolean;
+  hasSheetUrl: boolean;
 };
 
 export function JobChecklist(p: Props) {
@@ -24,7 +25,7 @@ export function JobChecklist(p: Props) {
   const steps: { label: string; done: boolean }[] = [
     { label: "สร้างงาน + ลูกค้า", done: true },
     { label: "ลูกค้าอนุมัติแบบ (Mockup)", done: p.hasApprovedMockup },
-    { label: "เก็บรายชื่อ–เบอร์–ไซซ์", done: p.itemCount > 0 },
+    { label: "ผูกลิงก์ Google Sheet ใบงาน", done: p.hasSheetUrl || p.itemCount > 0 },
     { label: "เลือกสเปค + ใส่กำหนดส่ง", done: p.hasSpec && p.hasDueDate },
     { label: "ลูกค้ายืนยันออเดอร์", done: p.orderConfirmed },
     { label: "เก็บมัดจำ", done: p.depositPaid },

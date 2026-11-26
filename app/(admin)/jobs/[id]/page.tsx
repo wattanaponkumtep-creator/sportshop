@@ -190,6 +190,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         sampleApproved={(job as { sample_status?: string }).sample_status === "approved"}
         receivedCheck={!!(job as { received_check_at?: string | null }).received_check_at}
         fullyPaid={dueTotal > 0 && paidSum >= dueTotal}
+        hasSheetUrl={!!(job as { sheet_url?: string | null }).sheet_url}
       />
 
       <LeadTimeCard
