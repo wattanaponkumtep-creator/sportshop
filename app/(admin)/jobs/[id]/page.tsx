@@ -19,6 +19,8 @@ import { JobMockups } from "@/components/jobs/job-mockups";
 import { CopyTrackLink } from "@/components/jobs/copy-track-link";
 import { ManualNotifyButton } from "@/components/jobs/manual-notify-button";
 import { DeleteJobButton } from "@/components/jobs/delete-job-button";
+import { ReorderButton } from "@/components/jobs/reorder-button";
+import { ClaimsPanel } from "@/components/jobs/claims-panel";
 import { WorkflowStepper } from "@/components/jobs/workflow-stepper";
 import { LeadTimeCard } from "@/components/jobs/lead-time-card";
 import { OrderConfirmAdmin } from "@/components/jobs/order-confirm-admin";
@@ -35,7 +37,7 @@ import { LineItemsEditor } from "@/components/jobs/line-items-editor";
 import { FactoryCommunication } from "@/components/jobs/factory-communication";
 import { SampleGate } from "@/components/jobs/sample-gate";
 import { r2PublicUrl } from "@/lib/storage/r2";
-import type { FactoryJob, FactoryMessage, JobItem } from "@/lib/types/database";
+import type { FactoryJob, FactoryMessage, JobItem, Claim } from "@/lib/types/database";
 import { FileText } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -66,6 +68,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     { data: lineItems },
     { data: factoryMessages },
     { data: shopInfoRows },
+    { data: claims },
   ] = await Promise.all([
     supabase.from("job_items").select("*").eq("job_id", id).order("position"),
     supabase.from("job_files").select("*").eq("job_id", id).order("created_at", { ascending: false }),
@@ -80,6 +83,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     supabase.from("job_line_items").select("*").eq("job_id", id).order("position"),
     supabase.from("factory_messages").select("*").eq("job_id", id).order("created_at", { ascending: true }),
     supabase.from("shop_info").select("shop_name, phone, bank_info, charge_customer_shipping, free_ship_min_qty, customer_ship_fee").eq("id", 1).limit(1),
+    supabase.from("claims").select("*").eq("job_id", id).order("created_at", { ascending: false }),
   ]);
 
   const shopInfo = (shopInfoRows && shopInfoRows[0]) as {
@@ -154,6 +158,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
               <FileText className="h-4 w-4" />
             </Link>
           </Button>
+          <ReorderButton jobId={job.id} />
           <DeleteJobButton jobId={job.id} jobCode={job.job_code} />
         </div>
       </header>
@@ -195,6 +200,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
             <TabsTrigger value="payments">การเงิน ({payments?.length ?? 0})</TabsTrigger>
             <TabsTrigger value="factory">โรงงาน</TabsTrigger>
             <TabsTrigger value="shipping">การจัดส่ง</TabsTrigger>
+            <TabsTrigger value="claims">เคลม ({(claims ?? []).length})</TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
           </TabsList>
         </div>
@@ -319,8 +325,30 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
           />
         </TabsContent>
 
-        <TabsContent value="shipping" className="mt-4">
+        <TabsContent value="shipping" className="mt-4 space-y-3">
+          {(() => {
+            const due =
+              Number(job.sale_price || 0) + Number(job.customer_shipping_fee || 0) - Number(job.discount || 0);
+            const paid = (payments ?? []).reduce((s, p) => {
+              const amt = Number((p as { amount?: number }).amount) || 0;
+              return (p as { type?: string }).type === "refund" ? s - amt : s + amt;
+            }, 0);
+            const outstanding = Math.round((due - paid) * 100) / 100;
+            return outstanding > 0 ? (
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">
+                ⚠️ <b>ยังมียอดค้าง ฿{outstanding.toLocaleString()}</b> — แนะนำเก็บเงินให้ครบก่อนส่งของ (เสื้อ custom ขายต่อไม่ได้)
+              </div>
+            ) : (
+              <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-emerald-300">
+                ✅ เก็บเงินครบแล้ว — ส่งของได้สบายใจ
+              </div>
+            );
+          })()}
           <JobShipmentPanel jobId={job.id} shipment={shipment ?? null} />
+        </TabsContent>
+
+        <TabsContent value="claims" className="mt-4">
+          <ClaimsPanel jobId={job.id} claims={(claims ?? []) as Claim[]} />
         </TabsContent>
 
         <TabsContent value="timeline" className="mt-4">

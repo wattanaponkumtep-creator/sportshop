@@ -77,6 +77,12 @@ export default async function ConfirmOrderPage({ params }: { params: Promise<{ t
           </div>
         )}
 
+        {mockupUrl && (
+          <p className="-mt-2 text-center text-[11px] text-muted-foreground">
+            📌 สีจริงบนเสื้ออาจต่างจากสีบนหน้าจอเล็กน้อย (ขึ้นกับหน้าจอแต่ละเครื่อง)
+          </p>
+        )}
+
         {/* Summary */}
         <div className="rounded-xl border border-border bg-card p-4 text-sm">
           <div className="mb-2 flex items-center gap-2 font-semibold">

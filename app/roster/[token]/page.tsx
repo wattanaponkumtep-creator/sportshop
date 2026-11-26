@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { r2PublicUrl } from "@/lib/storage/r2";
 import { RosterEntryForm } from "@/components/roster/roster-entry-form";
+import { SizeChart } from "@/components/roster/size-chart";
 import { CheckCircle2, Shirt } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -75,7 +76,11 @@ export default async function RosterPage({ params }: { params: Promise<{ token: 
             <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 p-3 text-xs text-sky-100">
               กรอก <b>ชื่อบนเสื้อ · เบอร์ · ไซซ์</b> ของแต่ละคนให้ครบ → กดส่ง (กรอกเองเพื่อความถูกต้อง 100%)
             </div>
+            <SizeChart />
             <RosterEntryForm token={token} initialRows={initialRows} />
+            <p className="text-center text-[11px] text-muted-foreground">
+              📌 หมายเหตุ: สีจริงบนเสื้ออาจต่างจากสีบนหน้าจอเล็กน้อย (ขึ้นกับหน้าจอแต่ละเครื่อง)
+            </p>
           </>
         )}
 

@@ -238,6 +238,18 @@ export interface Job {
   roster_submitted_at: string | null;
 }
 
+export interface Claim {
+  id: string;
+  job_id: string;
+  reason: string;
+  fault: string;
+  status: string;
+  resolution: string | null;
+  created_at: string;
+  resolved_at: string | null;
+  created_by: string | null;
+}
+
 export interface JobItem {
   id: string;
   job_id: string;
@@ -450,6 +462,7 @@ export type Database = {
       factory_jobs: TableDef<FactoryJob, FactoryJobsRelationships>;
       payments: TableDef<Payment, PaymentsRelationships>;
       shipments: TableDef<Shipment, ShipmentsRelationships>;
+      claims: TableDef<Claim>;
       notifications: TableDef<Notification>;
       mockups: TableDef<Mockup, MockupsRelationships>;
       line_webhook_events: TableDef<LineWebhookEvent>;
