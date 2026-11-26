@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { TemplateCard } from "@/components/templates/template-card";
+import { SalesAssistant } from "@/components/templates/sales-assistant";
 import { MessageSquare } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -211,9 +212,16 @@ export default function TemplatesPage() {
           Templates — ปิดการขาย
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          ข้อความสำหรับแนะนำ/เสนอ/ปิดการขายลูกค้า — คลิก &quot;Copy&quot; แล้วไปวางใน LINE/FB
+          ผู้ช่วยขาย — แนะนำสินค้า/ปิดการขายลูกค้า · เลือกสถานการณ์แล้วส่งได้เลย
         </p>
       </header>
+
+      {/* ผู้ช่วยขาย — สร้างข้อความอัตโนมัติตามสถานการณ์ */}
+      <SalesAssistant />
+
+      <div className="pt-1">
+        <h2 className="text-sm font-semibold text-foreground/90">หรือเลือกข้อความสำเร็จรูป (ก็อปด่วน)</h2>
+      </div>
 
       <Card>
         <CardContent className="p-4">
