@@ -31,9 +31,11 @@ export default async function ShowcasePage() {
   const { data } = await supabase.rpc("get_public_catalog");
   const categories = (data as unknown as CatalogCategory[]) ?? [];
 
-  // Pre-sign first thumbnail of first 4 items per category for preview
+  // เตรียม URL รูปของ "ทุกแบบ ทุกหมวด" (r2PublicUrl เป็นแค่การต่อสตริง ไม่มีต้นทุน)
+  // เผื่อ fallback ไปรูปแรกใน image_paths ถ้าไม่มี thumbnail
+  const thumbOf = (i: CatalogItem) => i.thumbnail_path ?? i.image_paths?.[0] ?? null;
   const allThumbs = categories
-    .flatMap((c) => c.items.slice(0, 4).map((i) => i.thumbnail_path))
+    .flatMap((c) => c.items.map(thumbOf))
     .filter((p): p is string => !!p);
   const uniqueThumbs = [...new Set(allThumbs)];
   const urlMap = new Map<string, string>();
@@ -101,13 +103,16 @@ function CategorySection({ category, urlMap }: { category: CatalogCategory; urlM
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {category.items.map((item) => (
+        {category.items.map((item) => {
+          const thumb = item.thumbnail_path ?? item.image_paths?.[0] ?? null;
+          const thumbUrl = thumb ? urlMap.get(thumb) : undefined;
+          return (
           <Card key={item.id} className="overflow-hidden transition hover:border-primary/50 hover:shadow-lg">
             <div className="aspect-square bg-muted">
-              {item.thumbnail_path && urlMap.get(item.thumbnail_path) ? (
+              {thumbUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={urlMap.get(item.thumbnail_path)!}
+                  src={thumbUrl}
                   alt={item.name}
                   className="h-full w-full object-cover"
                   loading="lazy"
@@ -135,7 +140,8 @@ function CategorySection({ category, urlMap }: { category: CatalogCategory; urlM
               )}
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
