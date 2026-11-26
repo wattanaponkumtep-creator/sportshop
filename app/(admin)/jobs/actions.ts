@@ -158,6 +158,29 @@ export async function updateJobStatus(jobId: string, status: JobStatus) {
   return { ok: true as const };
 }
 
+export async function addProductionOptionPreset(label: string) {
+  const supabase = await createClient();
+  const clean = label.trim();
+  if (!clean) return { ok: false as const, error: "ว่างเปล่า" };
+  const { error } = await supabase
+    .from("production_option_presets")
+    .upsert({ label: clean }, { onConflict: "label", ignoreDuplicates: true });
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath("/jobs");
+  return { ok: true as const };
+}
+
+export async function deleteProductionOptionPreset(label: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("production_option_presets")
+    .delete()
+    .eq("label", label.trim());
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath("/jobs");
+  return { ok: true as const };
+}
+
 export async function saveSheetUrl(jobId: string, url: string) {
   const supabase = await createClient();
   const clean = url.trim();

@@ -251,6 +251,12 @@ export interface Claim {
   created_by: string | null;
 }
 
+export interface ProductionOptionPreset {
+  id: string;
+  label: string;
+  created_at: string;
+}
+
 export interface JobItem {
   id: string;
   job_id: string;
@@ -464,6 +470,7 @@ export type Database = {
       payments: TableDef<Payment, PaymentsRelationships>;
       shipments: TableDef<Shipment, ShipmentsRelationships>;
       claims: TableDef<Claim>;
+      production_option_presets: TableDef<ProductionOptionPreset>;
       notifications: TableDef<Notification>;
       mockups: TableDef<Mockup, MockupsRelationships>;
       line_webhook_events: TableDef<LineWebhookEvent>;

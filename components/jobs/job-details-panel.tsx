@@ -12,8 +12,11 @@ import { X, Plus } from "lucide-react";
 import { PRIORITY_LABEL, PRODUCTION_OPTION_GROUPS, DELIVERY_METHOD_PRESETS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
-import { updateJob } from "@/app/(admin)/jobs/actions";
+import { updateJob, addProductionOptionPreset, deleteProductionOptionPreset } from "@/app/(admin)/jobs/actions";
 import type { Job, PriorityLevel } from "@/lib/types/database";
+
+// ชุดออปชั่นสำเร็จรูปทั้งหมด (ใช้กันซ้ำกับคลังที่บันทึกเอง)
+const PRESET_LABELS = new Set<string>(PRODUCTION_OPTION_GROUPS.flatMap((g) => g.options as readonly string[]));
 
 type EditInput = {
   product_type: string;
@@ -34,23 +37,59 @@ type EditInput = {
 
 const PRIORITIES: PriorityLevel[] = ["normal", "urgent", "rush"];
 
-export function JobDetailsPanel({ job, factories }: { job: Job; factories: { id: string; name: string }[] }) {
+export function JobDetailsPanel({
+  job,
+  factories,
+  savedOptions = [],
+}: {
+  job: Job;
+  factories: { id: string; name: string }[];
+  savedOptions?: string[];
+}) {
   const [isPending, startTransition] = useTransition();
   const [serverError, setServerError] = useState<string | null>(null);
   const [options, setOptions] = useState<string[]>(job.production_options ?? []);
   const [customOption, setCustomOption] = useState("");
+  // คลังออปชั่นที่ "เพิ่มเอง" — บันทึกไว้ใช้ซ้ำทุกงาน (ตัดตัวที่ซ้ำกับสำเร็จรูปออก)
+  const [savedList, setSavedList] = useState<string[]>(
+    () => savedOptions.filter((o) => !PRESET_LABELS.has(o)),
+  );
 
   function toggleOption(opt: string) {
     setOptions((prev) => (prev.includes(opt) ? prev.filter((o) => o !== opt) : [...prev, opt]));
   }
   function addCustomOption() {
     const v = customOption.trim();
-    if (!v || options.includes(v)) {
+    if (!v) {
       setCustomOption("");
       return;
     }
-    setOptions((prev) => [...prev, v]);
+    // เลือกใส่ในงานนี้
+    setOptions((prev) => (prev.includes(v) ? prev : [...prev, v]));
     setCustomOption("");
+    // บันทึกลงคลัง (ถ้ายังไม่เคยมี + ไม่ใช่ตัวสำเร็จรูป) เพื่อใช้ซ้ำงานหน้า
+    if (!PRESET_LABELS.has(v) && !savedList.includes(v)) {
+      setSavedList((prev) => [...prev, v]); // optimistic
+      startTransition(async () => {
+        const res = await addProductionOptionPreset(v);
+        if (!res.ok) {
+          setSavedList((prev) => prev.filter((o) => o !== v));
+          toast({ title: "บันทึกออปชั่นเข้าคลังไม่สำเร็จ", description: res.error, variant: "destructive" });
+        } else {
+          toast({ title: `บันทึก “${v}” เข้าคลังแล้ว — งานหน้ากดเลือกได้เลย ✅` });
+        }
+      });
+    }
+  }
+  function removeFromCatalog(opt: string) {
+    setSavedList((prev) => prev.filter((o) => o !== opt)); // optimistic
+    startTransition(async () => {
+      const res = await deleteProductionOptionPreset(opt);
+      if (!res.ok) {
+        setSavedList((prev) => (prev.includes(opt) ? prev : [...prev, opt]));
+        toast({ title: "ลบออกจากคลังไม่สำเร็จ", description: res.error, variant: "destructive" });
+      }
+    });
   }
   function removeOption(opt: string) {
     setOptions((prev) => prev.filter((o) => o !== opt));
@@ -173,9 +212,46 @@ export function JobDetailsPanel({ job, factories }: { job: Job; factories: { id:
             </div>
           ))}
 
+          {/* คลังออปชั่นที่บันทึกเอง — ใช้ซ้ำได้ทุกงาน */}
+          {savedList.length > 0 && (
+            <div className="space-y-1.5 border-t border-border pt-3">
+              <Label className="text-xs text-muted-foreground">⭐ ที่บันทึกไว้ (เพิ่มเอง)</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {savedList.map((opt) => {
+                  const active = options.includes(opt);
+                  return (
+                    <span
+                      key={opt}
+                      className={cn(
+                        "inline-flex items-center gap-1 rounded-full border-2 pl-3 pr-1.5 py-1 text-xs transition",
+                        active
+                          ? "border-primary bg-primary/15 font-medium text-foreground"
+                          : "border-border text-muted-foreground hover:border-primary/40",
+                      )}
+                    >
+                      <button type="button" onClick={() => toggleOption(opt)}>
+                        {active ? "✓ " : ""}
+                        {opt}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeFromCatalog(opt)}
+                        title="ลบออกจากคลัง"
+                        className="rounded-full p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-muted-foreground">กดชื่อเพื่อเลือกใส่งานนี้ · กด ✕ เพื่อลบออกจากคลัง</p>
+            </div>
+          )}
+
           {/* Custom option */}
           <div className="space-y-1.5 border-t border-border pt-3">
-            <Label className="text-xs text-muted-foreground">เพิ่มเอง (อื่นๆ)</Label>
+            <Label className="text-xs text-muted-foreground">เพิ่มเอง (อื่นๆ) — จะถูกบันทึกเข้าคลังให้ใช้ซ้ำ</Label>
             <div className="flex gap-2">
               <Input
                 value={customOption}

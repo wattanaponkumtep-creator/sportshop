@@ -71,6 +71,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     { data: factoryMessages },
     { data: shopInfoRows },
     { data: claims },
+    { data: optionPresets },
   ] = await Promise.all([
     supabase.from("job_items").select("*").eq("job_id", id).order("position"),
     supabase.from("job_files").select("*").eq("job_id", id).order("created_at", { ascending: false }),
@@ -86,6 +87,7 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
     supabase.from("factory_messages").select("*").eq("job_id", id).order("created_at", { ascending: true }),
     supabase.from("shop_info").select("shop_name, phone, bank_info, charge_customer_shipping, free_ship_min_qty, customer_ship_fee").eq("id", 1).limit(1),
     supabase.from("claims").select("*").eq("job_id", id).order("created_at", { ascending: false }),
+    supabase.from("production_option_presets").select("label").order("created_at", { ascending: true }),
   ]);
 
   const shopInfo = (shopInfoRows && shopInfoRows[0]) as {
@@ -234,7 +236,11 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
         </div>
 
         <TabsContent value="details" className="mt-4">
-          <JobDetailsPanel job={job} factories={factories ?? []} />
+          <JobDetailsPanel
+            job={job}
+            factories={factories ?? []}
+            savedOptions={(optionPresets ?? []).map((o) => (o as { label: string }).label)}
+          />
         </TabsContent>
 
         <TabsContent value="items" className="mt-4 space-y-4">
