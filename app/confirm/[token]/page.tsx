@@ -2,7 +2,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { r2PublicUrl } from "@/lib/storage/r2";
 import { formatThaiFullDate } from "@/lib/utils";
 import { ConfirmForm } from "@/components/confirm/confirm-form";
-import { CheckCircle2, Shirt, Package } from "lucide-react";
+import { CheckCircle2, Shirt, Package, ExternalLink } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -131,6 +131,24 @@ export default async function ConfirmOrderPage({ params }: { params: Promise<{ t
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {/* Google Sheet ใบงาน — เช็กรายชื่อก่อนยืนยัน */}
+        {job.sheet_url && (
+          <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-4">
+            <div className="mb-1 text-sm font-semibold text-emerald-200">📋 ตรวจรายชื่อในใบงานก่อนยืนยัน</div>
+            <p className="mb-3 text-xs text-emerald-100/80">
+              เปิดใบงาน (Google Sheet) เช็ก <b>ชื่อ–เบอร์–ไซซ์</b> ของทุกคนให้ครบถูกต้อง เพราะเมื่อกดยืนยันแล้วจะถือว่าข้อมูลถูกต้องทั้งหมด
+            </p>
+            <a
+              href={job.sheet_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
+            >
+              <ExternalLink className="h-4 w-4" /> เปิดใบงานเช็กรายชื่อ
+            </a>
           </div>
         )}
 

@@ -53,6 +53,10 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
   if (error || !data) notFound();
   const job = data as unknown as TrackingPayload;
 
+  // ลิงก์ใบงาน Google Sheet (ถ้าร้านผูกไว้)
+  const { data: jobRow } = await supabase.from("jobs").select("sheet_url").eq("id", job.job_id).maybeSingle();
+  const sheetUrl = (jobRow?.sheet_url as string | null) ?? null;
+
   // รูป mockup → URL สาธารณะ R2
   const mockupSignedUrls: string[] = (job.latest_mockup?.storage_paths ?? []).map((path) => r2PublicUrl(path));
 
@@ -90,6 +94,25 @@ export default async function TrackPage({ params }: { params: Promise<{ token: s
             <InfoRow label="เปิดงานเมื่อ" value={formatDateTH(job.received_at, "d MMM yy")} />
           </CardContent>
         </Card>
+
+        {/* ใบงาน Google Sheet — เช็กรายชื่อ */}
+        {sheetUrl && (
+          <Card className="border-emerald-500/40 bg-emerald-500/10">
+            <CardContent className="p-5">
+              <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-emerald-300">
+                <ClipboardCheck className="h-4 w-4" /> ใบงาน / รายชื่อทีม
+              </div>
+              <p className="mb-3 text-xs text-muted-foreground">
+                เปิดใบงาน (Google Sheet) เพื่อเช็ก/กรอก ชื่อ–เบอร์–ไซซ์ ของทุกคนให้ครบถูกต้อง
+              </p>
+              <Button asChild className="w-full bg-emerald-600 text-white hover:bg-emerald-700">
+                <a href={sheetUrl} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4" /> เปิดใบงานเช็กรายชื่อ
+                </a>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Production progress (if any progress is started) */}
         {overallProgress > 0 && (
