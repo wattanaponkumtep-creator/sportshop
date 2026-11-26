@@ -23,6 +23,7 @@ import { ReorderButton } from "@/components/jobs/reorder-button";
 import { ClaimsPanel } from "@/components/jobs/claims-panel";
 import { WorkflowStepper } from "@/components/jobs/workflow-stepper";
 import { LeadTimeCard } from "@/components/jobs/lead-time-card";
+import { JobChecklist } from "@/components/jobs/job-checklist";
 import { OrderConfirmAdmin } from "@/components/jobs/order-confirm-admin";
 import { RosterLinkAdmin } from "@/components/jobs/roster-link-admin";
 import { SizeSummary } from "@/components/jobs/size-summary";
@@ -103,6 +104,18 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
   const customer = job.customers as { id: string; name: string; phone: string | null } | null;
   const factory = job.factories as { id: string; name: string } | null;
 
+  // ---- ค่าคำนวณสำหรับเช็กลิสต์ + ยอดค้าง ----
+  const payList = (payments ?? []) as { amount?: number; type?: string }[];
+  const paidSum = payList.reduce(
+    (s, pm) => s + (pm.type === "refund" ? -1 : 1) * (Number(pm.amount) || 0),
+    0,
+  );
+  const dueTotal =
+    Number(job.sale_price || 0) +
+    Number(job.customer_shipping_fee || 0) -
+    Number((job as { discount?: number }).discount || 0);
+  const hasApprovedMockup = ((mockups ?? []) as { status?: string }[]).some((m) => m.status === "approved");
+
   return (
     <div className="container space-y-4 p-3 sm:space-y-6 sm:p-4 md:p-8">
       <Link href="/jobs" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
@@ -164,6 +177,19 @@ export default async function JobDetailPage({ params }: { params: Promise<{ id: 
       </header>
 
       <WorkflowStepper currentStatus={job.status} timeline={timeline ?? []} />
+
+      <JobChecklist
+        status={job.status}
+        hasApprovedMockup={hasApprovedMockup}
+        itemCount={(items ?? []).length}
+        hasSpec={((job.production_options ?? []) as string[]).length > 0}
+        hasDueDate={!!job.due_date}
+        orderConfirmed={!!(job as { order_confirmed_at?: string | null }).order_confirmed_at}
+        depositPaid={paidSum > 0}
+        sampleApproved={(job as { sample_status?: string }).sample_status === "approved"}
+        receivedCheck={!!(job as { received_check_at?: string | null }).received_check_at}
+        fullyPaid={dueTotal > 0 && paidSum >= dueTotal}
+      />
 
       <LeadTimeCard
         quantity={Math.max(
